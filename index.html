@@ -20,14 +20,14 @@
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
         body { background: var(--gb-body); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        #game-area { width: 100vw; height: 46vh; display: flex; justify-content: center; align-items: center; padding: 15px; margin-top: env(safe-area-inset-top, 10px); }
+        #game-area { width: 100vw; height: 46vh; display: flex; justify-content: center; align-items: center; padding: 10px; margin-top: env(safe-area-inset-top, 5px); }
 
         .screen-frame {
             position: relative;
             background: #333;
-            width: 92vw; max-width: 420px;
-            aspect-ratio: 240 / 185;
-            border-radius: 12px 12px 55px 12px;
+            width: 95vw; max-width: 440px;
+            aspect-ratio: 240 / 180;
+            border-radius: 12px 12px 60px 12px;
             box-shadow: 0 10px 35px rgba(0,0,0,0.8);
             display: flex; justify-content: center; align-items: center;
             overflow: hidden;
@@ -35,21 +35,21 @@
 
         #screen-inner {
             position: relative;
-            width: 90%;
+            width: 92%;
             aspect-ratio: 3 / 2;
             background: var(--screen-green);
-            border: 4px solid #111;
-            border-radius: 4px;
+            border: 3px solid #111;
+            border-radius: 2px;
             overflow: hidden;
         }
 
-        /* 遊戲畫布：放大至 98% 並上移 (top: 52%) */
+        /* 遊戲畫布：100% 滿版並上移 */
         canvas { 
             display: none; 
             position: absolute;
-            top: 52%; left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 98% !important; height: auto !important; 
+            width: 100% !important; height: auto !important; 
             image-rendering: pixelated; 
             z-index: 5;
         }
@@ -62,45 +62,47 @@
             background: var(--screen-green);
         }
 
+        /* 跑馬燈優化：底色透明度調整 */
         #marquee-bar {
             position: absolute; top: 0; left: 0; width: 100%;
-            background: rgba(15, 56, 15, 0.95);
-            color: var(--screen-green);
+            background: rgba(15, 56, 15, 0.45); /* 降低透明度，讓下方畫面透出 */
+            color: #fff; 
+            text-shadow: 1px 1px 2px #000;
             font-family: monospace; font-size: 11px;
-            padding: 6px 0; white-space: nowrap; overflow: hidden;
+            padding: 4px 0; white-space: nowrap; overflow: hidden;
             display: none; z-index: 110;
         }
-        #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 10s linear infinite; }
+        #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 12s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 控制器：針對紅叉區域優化 */
-        .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 35px; padding-bottom: env(safe-area-inset-bottom, 25px); }
+        .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
-        .d-pad { position: relative; width: 120px; height: 120px; background: transparent; }
+        .d-pad { position: relative; width: 125px; height: 125px; background: transparent; }
         .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; z-index: 10; }
-        #btn-u { top: 0; left: 42px; width: 36px; height: 45px; border-radius: 4px 4px 0 0; }
-        #btn-d { bottom: 0; left: 42px; width: 36px; height: 45px; border-radius: 0 0 4px 4px; }
-        #btn-l { left: 0; top: 42px; width: 45px; height: 36px; border-radius: 4px 0 0 4px; }
-        #btn-r { right: 0; top: 42px; width: 45px; height: 36px; border-radius: 0 4px 4px 0; }
+        #btn-u { top: 0; left: 44px; width: 38px; height: 48px; border-radius: 4px 4px 0 0; }
+        #btn-d { bottom: 0; left: 44px; width: 38px; height: 48px; border-radius: 0 0 4px 4px; }
+        #btn-l { left: 0; top: 44px; width: 48px; height: 38px; border-radius: 4px 0 0 4px; }
+        #btn-r { right: 0; top: 44px; width: 48px; height: 38px; border-radius: 0 4px 4px 0; }
         
-        /* 徹底消除中心及周邊色塊，與背景黑色融為一體 */
+        /* 移除任何背景色塊殘影 */
         #btn-center { 
-            top: 42px; left: 42px; width: 36px; height: 36px; 
-            background: var(--gb-body); 
+            top: 44px; left: 44px; width: 38px; height: 38px; 
+            background: transparent; 
             border: none; box-shadow: none; z-index: 5; 
         }
 
-        .action-btns { position: relative; width: 140px; height: 110px; }
-        .round-k { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.6); box-shadow: 0 6px 0 #500; }
+        .action-btns { position: relative; width: 150px; height: 120px; }
+        .round-k { position: absolute; width: 64px; height: 64px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; color: rgba(255,255,255,0.7); box-shadow: 0 6px 0 #500; }
         #btn-b { left: 0; bottom: 0; }
         #btn-a { right: 0; top: 0; }
 
-        .sys-row { display: flex; justify-content: center; gap: 40px; }
-        .oval-k { width: 55px; height: 18px; background: #444; border-radius: 10px; transform: rotate(-25deg); box-shadow: 0 3px 0 #111; }
-        .sys-label { font-size: 10px; color: #444; font-weight: bold; transform: rotate(-25deg); margin-top: 5px; }
+        .sys-row { display: flex; justify-content: center; gap: 45px; }
+        .oval-k { width: 58px; height: 20px; background: #444; border-radius: 12px; transform: rotate(-25deg); box-shadow: 0 3px 0 #111; }
+        .sys-label { font-size: 11px; color: #444; font-weight: bold; transform: rotate(-25deg); margin-top: 6px; }
 
-        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) !important; box-shadow: none !important; filter: brightness(1.2); }
+        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) rotate(-25deg if sys); box-shadow: none !important; filter: brightness(1.2); }
+        .sys-group .oval-k:active { transform: translateY(2px) rotate(-25deg); }
 
         #setup-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
@@ -152,7 +154,7 @@
                         document.getElementById('marquee-bar').style.display = 'block';
                     }
                 });
-            } catch (e) { alert("Load Failed"); }
+            } catch (e) { alert("ROM Load Failed"); }
         }
 
         function triggerKey(code, type) {
@@ -216,7 +218,7 @@
             <div class="sys-group"><div class="oval-k" id="btn-se"></div><div class="sys-label">SELECT</div></div>
             <div class="sys-group"><div class="oval-k" id="btn-st"></div><div class="sys-label">START</div></div>
         </div>
-        <div style="text-align:center; color:#333; font-size:10px; font-weight:bold; letter-spacing:4px;">Nintendo GAME BOY</div>
+        <div style="text-align:center; color:#333; font-size:10px; font-weight:bold; letter-spacing:4px; margin-top:10px;">Nintendo GAME BOY</div>
     </div>
 
 </body>
