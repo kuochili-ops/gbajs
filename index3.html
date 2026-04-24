@@ -17,24 +17,41 @@
 
     <style>
         :root { --p: #6b509c; }
-        /* 嚴格禁止系統干擾 */
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; }
         body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        #game-area { width: 100vw; height: 35vh; display: flex; justify-content: center; align-items: center; margin-top: env(safe-area-inset-top, 10px); }
+        /* 畫面增大 1/3 (從 35vh 變更為 48vh) */
+        #game-area { 
+            position: relative;
+            width: 100vw; height: 48vh; 
+            display: flex; justify-content: center; align-items: center; 
+            margin-top: env(safe-area-inset-top, 10px);
+            background: #000;
+        }
         canvas { display: block; max-width: 100%; max-height: 100%; aspect-ratio: 3/2; image-rendering: pixelated; }
 
-        .pad { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding-bottom: env(safe-area-inset-bottom, 20px); }
-        .row { display: flex; justify-content: center; gap: 12px; width: 100%; }
+        /* 訊息層：疊加在 Canvas 之上 */
+        #msg-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 24px;
+            background: rgba(0,0,0,0.5); overflow: hidden; pointer-events: none;
+            display: flex; align-items: center; z-index: 10;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        #marquee { white-space: nowrap; font-family: monospace; font-size: 14px; animation: slide 15s linear infinite; }
+        @keyframes slide { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
+
+        /* 按鍵區佈局優化 */
+        .pad { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 20px; padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .row { display: flex; justify-content: center; gap: 15px; width: 100%; }
         .k { 
-            width: 72px; height: 72px; background: rgba(255,255,255,0.15); 
-            border: 2px solid #555; border-radius: 50%; 
+            width: 75px; height: 75px; background: rgba(255,255,255,0.1); 
+            border: 2px solid #444; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 18px; font-weight: bold; color: #fff;
+            font-size: 20px; font-weight: bold; color: #fff;
             box-shadow: 0 4px 0 #222;
         }
-        .sys { width: 85px; height: 35px; border-radius: 8px; font-size: 11px; background: rgba(255,255,255,0.1); }
-        .k:active { background: var(--p); transform: translateY(2px); box-shadow: 0 2px 0 #111; }
+        .sys { width: 90px; height: 35px; border-radius: 8px; font-size: 11px; }
+        .k:active { background: var(--p); transform: translateY(3px); box-shadow: none; }
 
         #setup-ui, #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
@@ -43,17 +60,12 @@
         var gba;
         var customMsg = "";
         var charIndex = 0;
-        var marqueePos = 240;
-        
-        // --- V20 新增：全域輸入狀態機 ---
-        var inputs = {
-            up: false, down: false, left: false, right: false,
-            a: false, b: false, start: false, select: false
-        };
+
+        // GBA 鍵盤映射碼 (gbajs 預設)
+        const K = { UP:38, DOWN:40, LEFT:37, RIGHT:39, A:90, B:88, START:13, SELECT:16 };
 
         try {
             gba = new GameBoyAdvance();
-            gba.keypad.eatInput = true;
         } catch (e) { console.error(e); }
 
         window.onload = function() {
@@ -61,7 +73,8 @@
             const msgParam = params.get('msg');
             if (msgParam) {
                 document.getElementById('setup-ui').style.display = 'none';
-                customMsg = " ★ " + decodeURIComponent(msgParam).replace(/\n/g, " ") + " ★ ";
+                customMsg = " ★ " + decodeURIComponent(msgParam) + " ★ ";
+                document.getElementById('marquee').innerText = customMsg;
                 type();
             } else {
                 document.getElementById('intro-overlay').style.display = 'none';
@@ -81,32 +94,6 @@
             } else { document.getElementById('hint').style.opacity = 1; }
         }
 
-        // --- V20 核心循環：強迫每一幀同步按鍵狀態 ---
-        function syncLoop() {
-            if (gba && gba.keypad) {
-                // 如果 Map 裡是 true，就呼叫 keydown，否則呼叫 keyup
-                inputs.up ? gba.keypad.keydown(gba.keypad.UP) : gba.keypad.keyup(gba.keypad.UP);
-                inputs.down ? gba.keypad.keydown(gba.keypad.DOWN) : gba.keypad.keyup(gba.keypad.DOWN);
-                inputs.left ? gba.keypad.keydown(gba.keypad.LEFT) : gba.keypad.keyup(gba.keypad.LEFT);
-                inputs.right ? gba.keypad.keydown(gba.keypad.RIGHT) : gba.keypad.keyup(gba.keypad.RIGHT);
-                inputs.a ? gba.keypad.keydown(gba.keypad.A) : gba.keypad.keyup(gba.keypad.A);
-                inputs.b ? gba.keypad.keydown(gba.keypad.B) : gba.keypad.keyup(gba.keypad.B);
-                inputs.start ? gba.keypad.keydown(gba.keypad.START) : gba.keypad.keyup(gba.keypad.START);
-                inputs.select ? gba.keypad.keydown(gba.keypad.SELECT) : gba.keypad.keyup(gba.keypad.SELECT);
-                
-                // 順便畫跑馬燈
-                const ctx = document.getElementById('screen').getContext('2d');
-                ctx.fillStyle = "rgba(0,0,0,0.4)";
-                ctx.fillRect(0, 0, 240, 16);
-                ctx.font = "11px monospace";
-                ctx.fillStyle = "#ffffff";
-                ctx.fillText(customMsg, marqueePos, 12);
-                marqueePos -= 1.0;
-                if (marqueePos < -ctx.measureText(customMsg).width) marqueePos = 240;
-            }
-            requestAnimationFrame(syncLoop);
-        }
-
         async function runGame() {
             if (charIndex < customMsg.length) return;
             if (gba.audio && gba.audio.context) gba.audio.context.resume();
@@ -118,32 +105,40 @@
                     if (result) {
                         gba.runStable();
                         document.getElementById('intro-overlay').style.display = 'none';
-                        syncLoop(); // 啟動同步循環
                     }
                 });
             } catch (e) { alert("ERROR"); }
         }
 
-        // --- V20：極簡化的按鍵監聽，只負責修改狀態 Map ---
-        function setupBtn(id, keyName) {
+        // --- V21 核心：全域事件注入器 ---
+        function triggerKey(code, type) {
+            const event = new KeyboardEvent(type, {
+                keyCode: code,
+                which: code,
+                bubbles: true,
+                cancelable: true
+            });
+            window.dispatchEvent(event);
+        }
+
+        function setupBtn(id, keyCode) {
             const el = document.getElementById(id);
-            const start = (e) => { e.preventDefault(); inputs[keyName] = true; };
-            const end = (e) => { e.preventDefault(); inputs[keyName] = false; };
+            const start = (e) => { e.preventDefault(); triggerKey(keyCode, 'keydown'); };
+            const end = (e) => { e.preventDefault(); triggerKey(keyCode, 'keyup'); };
             
             el.addEventListener('touchstart', start, {passive: false});
             el.addEventListener('touchend', end, {passive: false});
-            el.addEventListener('touchcancel', end, {passive: false});
             el.addEventListener('mousedown', start);
             el.addEventListener('mouseup', end);
         }
 
-        const timer = setInterval(() => {
+        const initButtons = setInterval(() => {
             if (gba) {
-                setupBtn('u', 'up'); setupBtn('d', 'down');
-                setupBtn('l', 'left'); setupBtn('r', 'right');
-                setupBtn('a', 'a'); setupBtn('b', 'b');
-                setupBtn('st', 'start'); setupBtn('se', 'select');
-                clearInterval(timer);
+                setupBtn('u', K.UP); setupBtn('d', K.DOWN);
+                setupBtn('l', K.LEFT); setupBtn('r', K.RIGHT);
+                setupBtn('a', K.A); setupBtn('b', K.B);
+                setupBtn('st', K.START); setupBtn('se', K.SELECT);
+                clearInterval(initButtons);
             }
         }, 300);
     </script>
@@ -161,23 +156,26 @@
     </div>
 
     <div id="game-area">
+        <div id="msg-overlay"><div id="marquee"></div></div>
         <canvas id="screen" width="240" height="160"></canvas>
     </div>
 
     <div class="pad">
-        <div class="row">
+        <div class="row" style="margin-bottom: -10px;">
             <div class="k sys" id="st">START</div>
-            <div class="k" id="u">↑</div>
             <div class="k sys" id="se">SELECT</div>
+        </div>
+        <div class="row">
+            <div class="k" id="u">↑</div>
         </div>
         <div class="row">
             <div class="k" id="l">←</div>
             <div class="k" id="d">↓</div>
             <div class="k" id="r">→</div>
         </div>
-        <div class="row" style="gap: 50px; margin-top: 5px;">
-            <div class="k" id="b" style="background:rgba(255,80,80,0.3);">B</div>
-            <div class="k" id="a" style="background:rgba(80,255,80,0.3);">A</div>
+        <div class="row" style="gap: 40px;">
+            <div class="k" id="b" style="background:rgba(255,80,80,0.2); border-color:#f88;">B</div>
+            <div class="k" id="a" style="background:rgba(80,255,80,0.2); border-color:#8f8;">A</div>
         </div>
     </div>
 
