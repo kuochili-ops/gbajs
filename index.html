@@ -11,9 +11,13 @@
     <script src="js/thumb.js"></script>
     <script src="js/mmu.js"></script>
     <script src="js/io.js"></script>
+    <script src="js/irq.js"></script>
+    <script src="js/keypad.js"></script>
+    <script src="js/sio.js"></script>
+    <script src="js/audio.js"></script>
     <script src="js/video.js"></script>
     <script src="js/video/proxy.js"></script>
-    <script src="js/audio.js"></script>
+    <script src="js/video/software.js"></script>
     <script src="js/savedata.js"></script>
     <script src="js/gpio.js"></script>
     <script src="js/gba.js"></script>
@@ -22,8 +26,7 @@
         :root { --p: #6b509c; }
         body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 螢幕容器 */
-        #screen-container { position: relative; width: 320px; height: 213px; margin-top: 40px; background: #111; border: 4px solid #333; border-radius: 8px; overflow: hidden; box-shadow: 0 0 20px rgba(107, 80, 156, 0.3); }
+        #screen-container { position: relative; width: 320px; height: 213px; margin-top: 40px; background: #111; border: 4px solid #333; border-radius: 8px; overflow: hidden; }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 
         /* 打字機遮罩 */
@@ -32,7 +35,7 @@
         .hint { margin-top: 50px; color: var(--p); font-size: 13px; opacity: 0; transition: 1s; letter-spacing: 2px; }
 
         /* 虛擬按鍵 */
-        .controls { display: flex; gap: 40px; margin-top: 60px; padding-bottom: 40px; }
+        .controls { display: flex; gap: 40px; margin-top: 60px; }
         .k { width: 80px; height: 80px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #444; touch-action: none; -webkit-user-select: none; }
         .k:active { background: var(--p); transform: scale(0.9); border-color: #fff; }
         
@@ -59,11 +62,11 @@
     </div>
 
     <script>
-        const message = "System: White 6 Forked Project\n--------------------------\nAccessing Digital Gift...\n\n你好，Serena。\n這是一個專屬於妳的互動空間。";
+        const message = "System: White 6 Project v4.5\n--------------------------\nStatus: Link Stable\n\n你好，Serena。\n這是專屬於妳的遊戲世界。";
         let charIndex = 0;
-        let gba;
+        var gba;
 
-        // 1. 打字機邏輯
+        // 啟動打字機
         function type() {
             const container = document.getElementById('typewriter');
             if (charIndex < message.length) {
@@ -75,60 +78,60 @@
             }
         }
 
-        // 2. 模擬器初始化
-        window.onload = async () => {
+        window.onload = function() {
             type();
             const statusEl = document.getElementById('status');
             
             try {
                 gba = new GameBoyAdvance();
                 gba.setCanvas(document.getElementById('screen'));
-                
-                statusEl.innerText = "正在加載遊戲數據...";
-                const response = await fetch("game.gba");
-                if (!response.ok) throw new Error("ROM_404");
-                
-                const buffer = await response.arrayBuffer();
-                gba.loadRom(buffer, (res) => {
-                    statusEl.innerText = "✅ 系統準備就緒";
-                });
-            } catch (e) {
-                statusEl.innerText = "❌ 錯誤: 請確認 game.gba 存在於根目錄";
-            }
-        };
+                gba.logLevel = gba.LOG_ERROR;
 
-        // 3. 點擊進入遊戲
+                // 直接嘗試載入遊戲 (game.gba 需放在根目錄)
+                statusEl.innerText = "正在連線數據中心...";
+                
+                fetch("game.gba")
+                    .then(res => {
+                        if(!res.ok) throw new Error("ROM_NOT_FOUND");
+                        return res.arrayBuffer();
+                    })
+                    .then(buffer => {
+                        gba.loadRom(buffer, (res) => {
+                            statusEl.innerText = "✅ 數據同步完成";
+                        });
+                    })
+                    .catch(err => {
+                        statusEl.innerText = "❌ 錯誤: " + err.message;
+                    });
+
+            } catch (e) {
+                statusEl.innerText = "❌ 核心初始化失敗";
+            }
+        }
+
         document.getElementById('intro-overlay').onclick = function() {
             if (charIndex >= message.length) {
                 this.style.opacity = 0;
                 setTimeout(() => this.style.display = 'none', 500);
                 if (gba) {
-                    gba.run();
+                    gba.runStable(); // 使用官方穩定的執行函數
                     if (gba.audio && gba.audio.context) gba.audio.context.resume();
                 }
             }
         };
 
-        // 4. 手機虛擬按鍵綁定
+        // 按鍵映射
         function bind(id, key) {
             const el = document.getElementById(id);
-            const keypad = gba.keypad;
-            el.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keypad.keydown(key);
-            });
-            el.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keypad.keyup(key);
-            });
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); gba.keypad.keydown(key); });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); gba.keypad.keyup(key); });
         }
 
-        // A=0, LEFT=5, RIGHT=4 (gbajs 標準映射)
         const checkGBA = setInterval(() => {
             if (gba && gba.keypad) {
-                bind('btn-a', 0);
-                bind('btn-left', 5);
-                bind('btn-right', 4);
+                bind('btn-a', gba.keypad.A);
+                bind('btn-left', gba.keypad.LEFT);
+                bind('btn-right', gba.keypad.RIGHT);
                 clearInterval(checkGBA);
             }
         }, 500);
