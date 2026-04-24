@@ -25,75 +25,70 @@
 
     <style>
         :root { --p: #6b509c; }
-        * { -webkit-tap-highlight-color: transparent; outline: none; touch-action: none; }
+        * { -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; }
         body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 1. 畫面完整顯示解決方案 */
+        /* 畫面容器：確保 3:2 且不溢出 */
         #game-wrapper {
             position: relative;
             width: 100vw;
-            height: 40vh; /* 限制高度，確保下方有空間給按鈕 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 38vh;
+            display: flex; align-items: center; justify-content: center;
             margin-top: env(safe-area-inset-top, 20px);
+            background: #000;
         }
         #screen-container {
             position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
         }
-        canvas { 
-            max-width: 100%; 
-            max-height: 100%; 
-            object-fit: contain; 
-            image-rendering: pixelated;
-        }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
 
-        /* 2. 訊息注入遊戲畫面 (疊加層) */
-        #ingame-msg {
+        /* 跑馬燈注入：現在它真的在遊戲畫面「裡面」 */
+        #ingame-marquee {
             position: absolute;
-            bottom: 10%;
-            width: 80%;
-            background: rgba(0, 0, 0, 0.5);
-            color: #fff;
-            font-family: monospace;
-            font-size: 14px;
-            padding: 5px 10px;
-            border-left: 3px solid var(--p);
-            pointer-events: none; /* 不擋住點擊 */
-            z-index: 100;
-            display: none; /* 遊戲開始後才顯示 */
-        }
-
-        /* 設定與遮罩 */
-        #setup-ui { position: fixed; inset: 0; background: #111; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; cursor: pointer; }
-        #typewriter { font-family: monospace; font-size: 18px; line-height: 1.6; }
-
-        /* 3. 按鍵深度優化 */
-        .controls { 
-            flex: 1; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 30px; 
+            top: 5px; /* 放在遊戲畫面頂部 */
             width: 100%;
-            padding-bottom: env(safe-area-inset-bottom, 40px);
+            background: rgba(107, 80, 156, 0.4); /* 半透明紫色 */
+            color: #fff;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+        }
+        #marquee-content { display: inline-block; padding-left: 100%; animation: scroll 12s linear infinite; }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+        /* 控制器優化：加入 Start/Select */
+        .controls-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 15px; 
+            width: 90%; 
+            margin-top: auto;
+            padding-bottom: env(safe-area-inset-bottom, 30px);
         }
         .k { 
-            width: 85px; height: 85px; 
-            background: rgba(255,255,255,0.15); 
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.1); 
             border: 2px solid #444; 
             border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 24px; color: #fff; font-weight: bold;
-            user-select: none;
+            font-size: 20px; font-weight: bold; color: #fff;
         }
-        .k:active { background: var(--p); transform: scale(0.92); border-color: #fff; }
+        .small-k { 
+            aspect-ratio: 2/1; 
+            border-radius: 10px; 
+            font-size: 12px; 
+            height: 35px; 
+        }
+        .k:active { background: var(--p); transform: scale(0.9); }
+
+        /* 打字機與設定 */
+        #setup-ui, #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        #typewriter { font-family: monospace; font-size: 18px; line-height: 1.6; }
     </style>
 
     <script>
@@ -101,11 +96,10 @@
         var customMsg = "";
         var charIndex = 0;
 
-        // 初始化模擬器
         try {
             gba = new GameBoyAdvance();
             gba.keypad.eatInput = true;
-        } catch (e) { console.error("GBA Init Error", e); }
+        } catch (e) { console.error(e); }
 
         window.onload = function() {
             const params = new URLSearchParams(window.location.search);
@@ -113,7 +107,7 @@
             if (msgParam) {
                 document.getElementById('setup-ui').style.display = 'none';
                 customMsg = decodeURIComponent(msgParam);
-                document.getElementById('ingame-msg').innerText = customMsg;
+                document.getElementById('marquee-content').innerText = " 𓃥 " + customMsg + " 𓃥 ";
                 type();
             } else {
                 document.getElementById('intro-overlay').style.display = 'none';
@@ -133,15 +127,18 @@
             } else { document.getElementById('hint').style.opacity = 1; }
         }
 
-        // 解決音效與啟動
         async function runGame() {
             if (charIndex < customMsg.length) return;
             
-            // 關鍵：在使用者點擊的當下立即啟動 AudioContext
+            // 解鎖音訊 (iOS 關鍵)
             if (gba.audio && gba.audio.context) {
-                gba.audio.context.resume().then(() => {
-                    console.log("Audio Context Resumed");
-                });
+                gba.audio.context.resume();
+                // 播放一個靜音片段來強制啟動
+                const buffer = gba.audio.context.createBuffer(1, 1, 22050);
+                const source = gba.audio.context.createBufferSource();
+                source.buffer = buffer;
+                source.connect(gba.audio.context.destination);
+                source.start(0);
             }
 
             try {
@@ -152,70 +149,67 @@
                     if (result) {
                         gba.runStable();
                         document.getElementById('intro-overlay').style.display = 'none';
-                        document.getElementById('ingame-msg').style.display = 'block'; // 顯示遊戲內訊息
+                        document.getElementById('ingame-marquee').style.display = 'block';
                     }
                 });
             } catch (e) { alert("讀取失敗"); }
         }
 
-        // 生成連結
-        function generateLink() {
-            const text = document.getElementById('msgInput').value;
-            const url = window.location.origin + window.location.pathname + "?msg=" + encodeURIComponent(text);
-            navigator.clipboard.writeText(url).then(() => alert("連結已複製"));
-        }
-
-        // 深度綁定按鍵 (解決反白與沒反應)
-        function forceBind(id, gbaKey) {
+        function bind(id, key) {
             const el = document.getElementById(id);
-            const start = (e) => {
-                e.preventDefault();
-                gba.keypad.keydown(gbaKey);
-            };
-            const end = (e) => {
-                e.preventDefault();
-                gba.keypad.keyup(gbaKey);
-            };
-            
-            // 同時監聽觸摸與滑鼠
-            el.addEventListener('touchstart', start, { passive: false });
-            el.addEventListener('touchend', end, { passive: false });
-            el.addEventListener('mousedown', start);
-            el.addEventListener('mouseup', end);
+            const press = (e) => { e.preventDefault(); gba.keypad.keydown(key); };
+            const release = (e) => { e.preventDefault(); gba.keypad.keyup(key); };
+            el.addEventListener('touchstart', press, {passive: false});
+            el.addEventListener('touchend', release, {passive: false});
+            el.addEventListener('mousedown', press);
+            el.addEventListener('mouseup', release);
         }
 
-        const checkGBA = setInterval(() => {
+        const timer = setInterval(() => {
             if (gba && gba.keypad) {
-                forceBind('btn-left', gba.keypad.LEFT);
-                forceBind('btn-right', gba.keypad.RIGHT);
-                forceBind('btn-a', gba.keypad.A);
-                clearInterval(checkGBA);
+                bind('btn-l', gba.keypad.LEFT);
+                bind('btn-r', gba.keypad.RIGHT);
+                bind('btn-u', gba.keypad.UP);
+                bind('btn-d', gba.keypad.DOWN);
+                bind('btn-a', gba.keypad.A);
+                bind('btn-b', gba.keypad.B);
+                bind('btn-st', gba.keypad.START);
+                bind('btn-se', gba.keypad.SELECT);
+                clearInterval(timer);
             }
-        }, 200);
+        }, 300);
     </script>
 </head>
 <body>
 
     <div id="setup-ui">
-        <textarea id="msgInput">System: White 6 Project</textarea>
-        <button onclick="generateLink()">複製連結</button>
+        <textarea id="msgInput" style="width:80%; height:100px; background:#111; color:#fff; border:1px solid var(--p); border-radius:10px; padding:10px;">庭瑜生日快樂🎂25 forever</textarea><br>
+        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('連結已複製'));" style="background:var(--p); color:#fff; border:none; padding:10px 20px; border-radius:20px;">複製專屬連結</button>
     </div>
 
     <div id="intro-overlay" onclick="runGame()">
         <div id="typewriter"></div>
-        <div id="hint" style="margin-top:40px; opacity:0; color:var(--p);">● 點擊開啟 (請開啟側邊聲音開關) ●</div>
+        <div id="hint" style="margin-top:40px; opacity:0; color:var(--p);">● 點擊開啟 (請確認靜音開關已關閉) ●</div>
     </div>
 
     <div id="game-wrapper">
         <div id="screen-container">
-            <div id="ingame-msg"></div> <canvas id="screen" width="240" height="160"></canvas>
+            <div id="ingame-marquee"><span id="marquee-content"></span></div>
+            <canvas id="screen" width="240" height="160"></canvas>
         </div>
     </div>
 
-    <div class="controls">
-        <div class="k" id="btn-left">←</div>
-        <div class="k" id="btn-a">A</div>
-        <div class="k" id="btn-right">→</div>
+    <div class="controls-grid">
+        <div class="k small-k" id="btn-st">START</div>
+        <div class="k" id="btn-u">↑</div>
+        <div class="k small-k" id="btn-se">SELECT</div>
+        
+        <div class="k" id="btn-l">←</div>
+        <div class="k" id="btn-d">↓</div>
+        <div class="k" id="btn-r">→</div>
+        
+        <div></div> <div class="k" id="btn-b" style="background:rgba(255,0,0,0.2)">B</div>
+        <div class="k" id="btn-a" style="background:rgba(0,255,0,0.2)">A</div>
     </div>
 
 </body>
