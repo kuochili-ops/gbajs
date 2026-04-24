@@ -26,41 +26,41 @@
     <style>
         :root { --p: #6b509c; }
         * { -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; outline: none; }
-        body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 畫面比例嚴格鎖定 */
-        #game-area {
-            position: relative;
+        /* 解決畫面偏右/放大的關鍵：嚴格容器控制 */
+        #game-container {
             width: 100vw;
-            height: calc(100vw * 0.66); /* 強制 3:2 */
-            max-height: 40vh;
+            height: 33vh; /* 縮小高度比例，確保下方有足夠空間給按鈕 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: env(safe-area-inset-top, 15px);
+            overflow: hidden;
             background: #000;
-            margin-top: env(safe-area-inset-top, 10px);
-            display: flex; justify-content: center; align-items: center;
         }
-        canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
-
-        /* 跑馬燈：懸浮在遊戲畫面內 */
-        #marquee-overlay {
-            position: absolute; top: 10px; width: 100%; height: 24px;
-            background: rgba(0,0,0,0.5); color: #fff; font-size: 14px;
-            overflow: hidden; white-space: nowrap; z-index: 100; pointer-events: none;
-            display: none; border-top: 1px solid var(--p); border-bottom: 1px solid var(--p);
+        
+        canvas {
+            /* 移除可能導致偏移的 margin 或 padding */
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 3 / 2;
+            image-rendering: pixelated;
         }
-        #marquee-content { display: inline-block; padding-left: 100%; animation: scroll 15s linear infinite; line-height: 24px; }
-        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 按鍵區：確保不與螢幕重疊 */
-        .controls { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; padding-bottom: env(safe-area-inset-bottom, 20px); }
+        /* 控制器：重新排列以避開系統邊緣 */
+        .pad { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding-bottom: env(safe-area-inset-bottom, 30px); }
         .row { display: flex; justify-content: center; gap: 15px; width: 100%; }
         .k { 
-            width: 70px; height: 70px; background: rgba(255,255,255,0.1); 
-            border: 2px solid #444; border-radius: 50%; 
+            width: 68px; height: 68px; background: rgba(255,255,255,0.12); 
+            border: 1px solid #444; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 20px; font-weight: bold; color: #fff;
+            font-size: 18px; font-weight: bold; color: #fff;
         }
-        .st-se { width: 80px; height: 35px; border-radius: 8px; font-size: 12px; }
-        .k:active { background: var(--p); border-color: #fff; transform: scale(0.9); }
+        .sys { width: 85px; height: 32px; border-radius: 6px; font-size: 11px; background: rgba(255,255,255,0.08); }
+        .k:active { background: var(--p); transform: scale(0.9); border-color: #fff; }
 
         #setup-ui, #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
@@ -69,6 +69,7 @@
         var gba;
         var customMsg = "";
         var charIndex = 0;
+        var marqueePos = 240;
 
         try {
             gba = new GameBoyAdvance();
@@ -80,9 +81,8 @@
             const msgParam = params.get('msg');
             if (msgParam) {
                 document.getElementById('setup-ui').style.display = 'none';
-                customMsg = decodeURIComponent(msgParam);
-                document.getElementById('marquee-content').innerText = " ★ " + customMsg + " ★ ";
-                typeIntro();
+                customMsg = decodeURIComponent(msgParam).replace(/\n/g, "  ★  ");
+                type();
             } else {
                 document.getElementById('intro-overlay').style.display = 'none';
             }
@@ -92,27 +92,43 @@
             }
         };
 
-        function typeIntro() {
+        function type() {
             const container = document.getElementById('typewriter');
             if (charIndex < customMsg.length) {
                 container.innerHTML += customMsg.charAt(charIndex);
                 charIndex++;
-                setTimeout(typeIntro, 50);
+                setTimeout(type, 50);
             } else { document.getElementById('hint').style.opacity = 1; }
+        }
+
+        // 融入式跑馬燈：直接在 Canvas 上層繪製
+        function drawMarquee() {
+            const canvas = document.getElementById('screen');
+            const ctx = canvas.getContext('2d');
+            
+            function loop() {
+                if (gba && gba.context) {
+                    // 繪製半透明文字條，營造融入感
+                    ctx.fillStyle = "rgba(0,0,0,0.4)";
+                    ctx.fillRect(0, 0, 240, 16);
+                    ctx.font = "11px monospace";
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillText(customMsg, marqueePos, 12);
+                    
+                    marqueePos -= 1.0;
+                    if (marqueePos < -ctx.measureText(customMsg).width) marqueePos = 240;
+                }
+                requestAnimationFrame(loop);
+            }
+            loop();
         }
 
         async function runGame() {
             if (charIndex < customMsg.length) return;
             
-            // 終極聲音解鎖
+            // 強制啟動音訊環境
             if (gba.audio && gba.audio.context) {
-                const ctx = gba.audio.context;
-                if (ctx.state === 'suspended') ctx.resume();
-                // 播放一段無聲 Buffer 誘騙系統
-                const b = ctx.createBuffer(1, 1, 22050);
-                const s = ctx.createBufferSource();
-                s.buffer = b; s.connect(ctx.destination);
-                s.start(0);
+                gba.audio.context.resume();
             }
 
             try {
@@ -122,13 +138,13 @@
                     if (result) {
                         gba.runStable();
                         document.getElementById('intro-overlay').style.display = 'none';
-                        document.getElementById('marquee-overlay').style.display = 'block';
+                        drawMarquee(); // 啟動文字注入
                     }
                 });
-            } catch (e) { alert("Load Error"); }
+            } catch (e) { alert("ERROR"); }
         }
 
-        function bindKey(id, gbaKey) {
+        function bind(id, gbaKey) {
             const el = document.getElementById(id);
             const down = (e) => { e.preventDefault(); gba.keypad.keydown(gbaKey); };
             const up = (e) => { e.preventDefault(); gba.keypad.keyup(gbaKey); };
@@ -136,13 +152,13 @@
             el.addEventListener('touchend', up, {passive: false});
         }
 
-        const check = setInterval(() => {
+        const timer = setInterval(() => {
             if (gba && gba.keypad) {
-                bindKey('k-u', gba.keypad.UP); bindKey('k-d', gba.keypad.DOWN);
-                bindKey('k-l', gba.keypad.LEFT); bindKey('k-r', gba.keypad.RIGHT);
-                bindKey('k-a', gba.keypad.A); bindKey('k-b', gba.keypad.B);
-                bindKey('k-st', gba.keypad.START); bindKey('k-se', gba.keypad.SELECT);
-                clearInterval(check);
+                bind('u', gba.keypad.UP); bind('d', gba.keypad.DOWN);
+                bind('l', gba.keypad.LEFT); bind('r', gba.keypad.RIGHT);
+                bind('a', gba.keypad.A); bind('b', gba.keypad.B);
+                bind('st', gba.keypad.START); bind('se', gba.keypad.SELECT);
+                clearInterval(timer);
             }
         }, 200);
     </script>
@@ -150,34 +166,33 @@
 <body>
 
     <div id="setup-ui">
-        <textarea id="msgInput" style="width:80%; height:100px; background:#111; color:#fff; border:1px solid var(--p); border-radius:10px; padding:10px;">庭瑜生日快樂🎂25 forever</textarea><br>
-        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('連結已複製'));" style="background:var(--p); color:#fff; border:none; padding:10px 20px; border-radius:20px;">複製連結</button>
+        <textarea id="msgInput">庭瑜生日快樂🎂25 forever</textarea><br>
+        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('複製成功'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成專屬連結</button>
     </div>
 
     <div id="intro-overlay" onclick="runGame()">
-        <div id="typewriter" style="font-size: 18px; font-family: monospace;"></div>
-        <div id="hint" style="margin-top:40px; opacity:0; color:var(--p); font-size:12px;">● CLICK TO START (請確認靜音開關已關閉) ●</div>
+        <div id="typewriter" style="padding:20px; line-height:1.8;"></div>
+        <div id="hint" style="margin-top:40px; opacity:0; color:var(--p); font-size:12px;">● CLICK TO START (請關閉靜音撥桿) ●</div>
     </div>
 
-    <div id="game-area">
-        <div id="marquee-overlay"><span id="marquee-content"></span></div>
+    <div id="game-container">
         <canvas id="screen" width="240" height="160"></canvas>
     </div>
 
-    <div class="controls">
+    <div class="pad">
         <div class="row">
-            <div class="k st-se" id="k-st">START</div>
-            <div class="k" id="k-u">↑</div>
-            <div class="k st-se" id="k-se">SELECT</div>
+            <div class="k sys" id="st">START</div>
+            <div class="k" id="u">↑</div>
+            <div class="k sys" id="se">SELECT</div>
         </div>
         <div class="row">
-            <div class="k" id="k-l">←</div>
-            <div class="k" id="k-d">↓</div>
-            <div class="k" id="k-r">→</div>
+            <div class="k" id="l">←</div>
+            <div class="k" id="d">↓</div>
+            <div class="k" id="r">→</div>
         </div>
-        <div class="row" style="gap: 40px;">
-            <div class="k" id="k-b" style="background:rgba(255,0,0,0.2); border-color:#f55;">B</div>
-            <div class="k" id="k-a" style="background:rgba(0,255,0,0.2); border-color:#5f5;">A</div>
+        <div class="row" style="gap: 45px; margin-top: 5px;">
+            <div class="k" id="b" style="color:#ff6b6b; border-color:#552222;">B</div>
+            <div class="k" id="a" style="color:#51cf66; border-color:#225522;">A</div>
         </div>
     </div>
 
