@@ -21,34 +21,25 @@
     <script src="js/savedata.js"></script>
     <script src="js/gpio.js"></script>
     <script src="js/gba.js"></script>
-    <script src="resources/xhr.js"></script>
-
-    <style>
+    <script src="resources/xhr.js"></script> <style>
         :root { --p: #6b509c; }
         body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
-        
-        #screen-container { position: relative; width: 320px; height: 213px; margin-top: 40px; background: #111; border: 4px solid #333; border-radius: 8px; overflow: hidden; box-shadow: 0 0 20px rgba(107, 80, 156, 0.3); }
+        #screen-container { position: relative; width: 320px; height: 213px; margin-top: 40px; background: #111; border: 4px solid #333; border-radius: 8px; overflow: hidden; }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-
-        /* 打字機遮罩 */
         #intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 30px; box-sizing: border-box; }
         #typewriter { font-family: "Courier New", monospace; font-size: 18px; line-height: 1.6; min-height: 120px; white-space: pre-wrap; }
-        .hint { margin-top: 50px; color: var(--p); font-size: 13px; opacity: 0; transition: 1s; letter-spacing: 2px; }
-
-        /* 虛擬按鍵 */
+        .hint { margin-top: 50px; color: var(--p); font-size: 13px; opacity: 0; transition: 1s; }
         .controls { display: flex; gap: 40px; margin-top: 60px; }
-        .k { width: 80px; height: 80px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #444; touch-action: none; -webkit-user-select: none; font-size: 20px; color: #eee; }
-        .k:active { background: var(--p); transform: scale(0.9); border-color: #fff; }
-        
-        #status { margin-top: 15px; font-size: 11px; color: #444; letter-spacing: 1px; }
+        .k { width: 80px; height: 80px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #444; touch-action: none; -webkit-user-select: none; font-size: 20px; }
+        .k:active { background: var(--p); transform: scale(0.9); }
+        #status { margin-top: 15px; font-size: 11px; color: #444; }
     </style>
 
     <script>
         var gba;
-        const message = "System: White 6 Project v6.0\n--------------------------\nTarget: Serena\nStatus: Link Stable\n\n你好，Serena。\n這是一個專屬於妳的遊戲空間。";
+        const message = "System: White 6 Project v7.0\n--------------------------\nAccessing local resources...\n\n你好，Serena。\n這是一個專屬於妳的遊戲空間。";
         let charIndex = 0;
 
-        // 打字機效果
         function type() {
             const container = document.getElementById('typewriter');
             if (charIndex < message.length) {
@@ -60,52 +51,39 @@
             }
         }
 
-        // 核心初始化 (參考官方邏輯)
-        try {
-            gba = new GameBoyAdvance();
-            gba.keypad.eatInput = true;
-        } catch (exception) {
-            gba = null;
-        }
-
         window.onload = function() {
             type();
-            if (gba) {
-                var canvas = document.getElementById('screen');
-                gba.setCanvas(canvas);
+            try {
+                gba = new GameBoyAdvance();
+                gba.setCanvas(document.getElementById('screen'));
                 gba.logLevel = gba.LOG_ERROR;
 
-                // 自動載入根目錄的 game.gba
                 var statusEl = document.getElementById('status');
-                statusEl.innerText = "正在同步遠端數據...";
+                statusEl.innerText = "正在調用 XHR 加載數據...";
 
-                // 使用官方 xhr.js 提供的 loadRom 功能 (如果有的話) 或是標準 fetch
-                fetch("game.gba?v=" + Date.now())
-                    .then(res => {
-                        if (!res.ok) throw new Error("ROM_NOT_FOUND");
-                        return res.arrayBuffer();
-                    })
-                    .then(buffer => {
+                // 使用官方 resources/xhr.js 裡的 loadRom 函數
+                // 這會處理 ArrayBuffer 的轉換，避開 fetch 可能的 MIME 問題
+                loadRom('game.gba', function(buffer) {
+                    if (buffer) {
                         gba.loadRom(buffer, function(result) {
                             if (result) {
                                 statusEl.innerText = "✅ 數據同步完成";
                             } else {
-                                statusEl.innerText = "❌ 數據解析失敗";
+                                statusEl.innerText = "❌ ROM 解析失敗";
                             }
                         });
-                    })
-                    .catch(err => {
-                        statusEl.innerText = "❌ 無法讀取 game.gba";
-                    });
+                    } else {
+                        statusEl.innerText = "❌ 檔案讀取失敗 (請檢查檔案名稱)";
+                    }
+                });
+            } catch (e) {
+                document.getElementById('status').innerText = "❌ 初始化異常: " + e.message;
             }
         }
 
-        // 進入遊戲
-        function startAdventure() {
+        function start() {
             if (charIndex >= message.length) {
-                var overlay = document.getElementById('intro-overlay');
-                overlay.style.opacity = 0;
-                setTimeout(() => overlay.style.display = 'none', 500);
+                document.getElementById('intro-overlay').style.display = 'none';
                 if (gba) {
                     gba.runStable();
                     if (gba.audio && gba.audio.context) gba.audio.context.resume();
@@ -113,41 +91,34 @@
             }
         }
 
-        // 按鍵綁定
         function bind(id, key) {
             const el = document.getElementById(id);
             el.addEventListener('touchstart', (e) => { e.preventDefault(); gba.keypad.keydown(key); });
             el.addEventListener('touchend', (e) => { e.preventDefault(); gba.keypad.keyup(key); });
         }
 
-        const checkGBA = setInterval(() => {
+        setInterval(() => {
             if (gba && gba.keypad) {
                 bind('btn-a', gba.keypad.A);
                 bind('btn-left', gba.keypad.LEFT);
                 bind('btn-right', gba.keypad.RIGHT);
-                clearInterval(checkGBA);
             }
-        }, 500);
+        }, 1000);
     </script>
 </head>
 <body>
-
-    <div id="intro-overlay" onclick="startAdventure()">
+    <div id="intro-overlay" onclick="start()">
         <div id="typewriter"></div>
         <div class="hint" id="hint">● 點擊螢幕開啟冒險 ●</div>
     </div>
-
     <div id="screen-container">
         <canvas id="screen" width="240" height="160"></canvas>
     </div>
-
-    <div id="status">INIT_CORE...</div>
-
+    <div id="status">READY</div>
     <div class="controls">
         <div class="k" id="btn-left">←</div>
         <div class="k" id="btn-a">A</div>
         <div class="k" id="btn-right">→</div>
     </div>
-
 </body>
 </html>
