@@ -16,69 +16,82 @@
     <script src="resources/xhr.js"></script>
 
     <style>
-        :root { --p: #6b509c; --gb-grey: #2d2d2d; --gb-red: #a31a48; --gb-body: #c4c4c4; }
-        * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; }
-        body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        :root { --p: #6b509c; --gb-grey: #2d2d2d; --gb-red: #a31a48; }
+        * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
+        body { background: #1a1a1a; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 1. 畫面再放大 (提升至 55vh) */
+        /* 畫面校正：確保絕對居中 */
         #game-area { 
             position: relative;
-            width: 100vw; height: 55vh; 
-            display: flex; justify-content: center; align-items: flex-end; 
-            background: #1a1a1a;
-            padding-bottom: 10px;
+            width: 100vw; height: 52vh; 
+            display: flex; justify-content: center; align-items: center; 
+            padding: 10px;
+            margin-top: env(safe-area-inset-top, 10px);
         }
+
+        /* 模擬實體機螢幕外框 */
+        .screen-frame {
+            position: relative;
+            background: #333;
+            padding: 15px 15px 25px 15px; /* 下方留深一點模擬造型 */
+            border-radius: 8px 8px 45px 8px;
+            box-shadow: inset 0 0 10px #000, 0 5px 15px rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center;
+        }
+
         canvas { 
-            display: block; width: 92%; max-height: 100%; 
-            aspect-ratio: 3/2; image-rendering: pixelated; 
-            border: 15px solid #333; border-radius: 8px 8px 40px 8px; /* 模擬 Game Boy 螢幕外框 */
+            display: block; 
+            width: 85vw; /* 依據手機寬度自動縮放 */
+            max-width: 480px;
+            aspect-ratio: 3/2; 
+            image-rendering: pixelated; 
+            background: #000;
         }
 
-        /* 2. 手把區域佈局：左十字、右AB */
+        /* 控制區 */
         .gb-controls { 
-            flex: 1; width: 100%; position: relative;
-            background: #222; /* 模擬深色面板 */
-            border-top: 2px solid #444;
+            flex: 1; width: 100%; 
             display: flex; flex-direction: column;
-            justify-content: space-around;
-            padding-bottom: env(safe-area-inset-bottom, 20px);
+            justify-content: space-evenly;
+            padding: 0 20px 20px 20px;
+            padding-bottom: env(safe-area-inset-bottom, 30px);
         }
 
-        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 25px; box-sizing: border-box; }
+        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
 
         /* 經典十字鍵 */
-        .d-pad { position: relative; width: 110px; height: 110px; }
-        .d-pad .k { position: absolute; background: var(--gb-grey); border: 1px solid #111; box-shadow: 0 4px 0 #000; }
-        #btn-u { top: 0; left: 38px; width: 34px; height: 40px; border-radius: 4px 4px 0 0; }
-        #btn-d { bottom: 0; left: 38px; width: 34px; height: 40px; border-radius: 0 0 4px 4px; }
-        #btn-l { left: 0; top: 38px; width: 40px; height: 34px; border-radius: 4px 0 0 4px; }
-        #btn-r { right: 0; top: 38px; width: 40px; height: 34px; border-radius: 0 4px 4px 0; }
-        #btn-center { top: 38px; left: 38px; width: 34px; height: 34px; background: var(--gb-grey); z-index: 1; }
+        .d-pad { position: relative; width: 120px; height: 120px; }
+        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #1a1a1a; }
+        #btn-u { top: 0; left: 40px; width: 40px; height: 45px; border-radius: 5px 5px 0 0; }
+        #btn-d { bottom: 0; left: 40px; width: 40px; height: 45px; border-radius: 0 0 5px 5px; }
+        #btn-l { left: 0; top: 40px; width: 45px; height: 40px; border-radius: 5px 0 0 5px; }
+        #btn-r { right: 0; top: 40px; width: 45px; height: 40px; border-radius: 0 5px 5px 0; }
+        #btn-center { top: 40px; left: 40px; width: 40px; height: 40px; background: var(--gb-grey); z-index: 1; }
 
-        /* AB 鍵：紅色傾斜 */
-        .action-btns { position: relative; width: 130px; height: 90px; }
+        /* AB 鍵 */
+        .action-btns { position: relative; width: 140px; height: 100px; }
         .round-k { 
-            position: absolute; width: 55px; height: 55px; border-radius: 50%; 
+            position: absolute; width: 60px; height: 60px; border-radius: 50%; 
             background: var(--gb-red); border: 2px solid #500;
             display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 18px; color: rgba(255,255,255,0.8);
-            box-shadow: 0 4px 0 #500;
+            font-weight: bold; font-size: 20px; color: rgba(255,255,255,0.7);
+            box-shadow: 0 5px 0 #500;
         }
         #btn-b { left: 0; bottom: 0; }
-        #btn-a { right: 0; top: 0; }
+        #btn-a { right: 0; top: 10px; }
 
-        /* Select / Start 橢圓鍵 */
-        .sys-row { display: flex; justify-content: center; gap: 30px; margin-top: 10px; }
+        /* Select / Start */
+        .sys-row { display: flex; justify-content: center; gap: 40px; }
+        .sys-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .oval-k { 
-            width: 60px; height: 18px; background: #666; border-radius: 10px;
-            transform: rotate(-25deg); /* 經典傾斜角度 */
-            box-shadow: 0 3px 0 #333;
+            width: 55px; height: 16px; background: #555; border-radius: 10px;
+            transform: rotate(-25deg);
+            box-shadow: 0 3px 0 #222;
         }
-        .sys-label { font-size: 10px; color: #888; font-weight: bold; margin-top: 25px; transform: rotate(-25deg); }
+        .sys-label { font-size: 9px; color: #666; font-weight: bold; transform: rotate(-25deg); }
 
-        /* 按下效果 */
-        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px); box-shadow: none; filter: brightness(1.2); }
-        #btn-a:active, #btn-b:active { transform: translate(0, 2px); }
+        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) !important; box-shadow: none !important; filter: brightness(1.3); }
+        #btn-a:active, #btn-b:active { transform: translate(0, 3px) !important; }
 
         #setup-ui, #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
@@ -97,7 +110,7 @@
             const msgParam = params.get('msg');
             if (msgParam) {
                 document.getElementById('setup-ui').style.display = 'none';
-                customMsg = " ★ " + decodeURIComponent(msgParam).replace(/\n/g, " ") + " ★ ";
+                customMsg = " ★ " + decodeURIComponent(msgParam) + " ★ ";
                 type();
             } else { document.getElementById('intro-overlay').style.display = 'none'; }
             if (gba) {
@@ -115,15 +128,16 @@
             } else { document.getElementById('hint').style.opacity = 1; }
         }
 
-        // 同步在 Canvas 內部畫文字條
         function syncLoop() {
             if (gba && gba.context) {
-                const ctx = document.getElementById('screen').getContext('2d');
-                ctx.fillStyle = "rgba(0,0,0,0.45)";
-                ctx.fillRect(0, 0, 240, 18);
+                const canvas = document.getElementById('screen');
+                const ctx = canvas.getContext('2d');
+                // 修正座標與高度，確保完美嵌入頂部
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillRect(0, 0, 240, 16);
                 ctx.font = "bold 11px monospace";
                 ctx.fillStyle = "#ffffff";
-                ctx.fillText(customMsg, marqueePos, 13);
+                ctx.fillText(customMsg, marqueePos, 12);
                 marqueePos -= 0.8;
                 if (marqueePos < -ctx.measureText(customMsg).width) marqueePos = 240;
             }
@@ -183,7 +197,9 @@
     </div>
 
     <div id="game-area">
-        <canvas id="screen" width="240" height="160"></canvas>
+        <div class="screen-frame">
+            <canvas id="screen" width="240" height="160"></canvas>
+        </div>
     </div>
 
     <div class="gb-controls">
@@ -202,17 +218,17 @@
         </div>
 
         <div class="sys-row">
-            <div style="display:flex; flex-direction:column; align-items:center;">
+            <div class="sys-group">
                 <div class="oval-k" id="btn-se"></div>
                 <div class="sys-label">SELECT</div>
             </div>
-            <div style="display:flex; flex-direction:column; align-items:center;">
+            <div class="sys-group">
                 <div class="oval-k" id="btn-st"></div>
                 <div class="sys-label">START</div>
             </div>
         </div>
         
-        <div style="text-align:center; color:#555; font-size:12px; font-weight:bold; letter-spacing:1px; margin-top:5px;">Nintendo GAME BOY</div>
+        <div style="text-align:center; color:#444; font-size:11px; font-weight:bold; letter-spacing:2px;">Nintendo GAME BOY</div>
     </div>
 
 </body>
