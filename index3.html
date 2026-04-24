@@ -16,83 +16,85 @@
     <script src="resources/xhr.js"></script>
 
     <style>
-        :root { --p: #6b509c; --gb-grey: #2d2d2d; --gb-red: #a31a48; }
+        :root { --p: #6b509c; --gb-grey: #2d2d2d; --gb-red: #a31a48; --body-bg: #1a1a1a; }
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
-        body { background: #1a1a1a; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        body { background: var(--body-bg); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 1. 畫面區域校正：確保整體置中 */
+        /* 1. 遊戲畫面區域：縮小並絕對置中 */
         #game-area { 
-            width: 100vw; height: 48vh; 
+            width: 100vw; height: 45vh; 
             display: flex; justify-content: center; align-items: center; 
-            padding: 10px;
+            padding: 20px;
             margin-top: env(safe-area-inset-top, 10px);
         }
 
-        /* 2. 強化版螢幕框架 */
         .screen-frame {
             position: relative;
             background: #333;
-            width: 90vw; max-width: 420px;
-            aspect-ratio: 240 / 185; /* 稍微加高以容納底部圓角造型 */
+            width: 88vw; max-width: 400px;
+            aspect-ratio: 240 / 180;
             border-radius: 10px 10px 50px 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
-            display: flex; justify-content: center; align-items: flex-start;
-            padding-top: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: center; /* 內部元素完全置中 */
         }
 
-        /* 3. Canvas 精準置中與縮小 */
         canvas { 
             display: block; 
-            width: 94% !important; /* 稍微縮小防止邊緣切到 */
+            width: 80% !important; /* 縮小比例以確保不被裁切 */
             height: auto !important;
             aspect-ratio: 3 / 2;
             image-rendering: pixelated; 
             background: #000;
-            border: 4px solid #000; /* 內縮黑邊 */
-            box-shadow: 0 0 5px rgba(0,0,0,1);
+            border: 2px solid #000;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
 
-        /* 控制區：完美還原 Game Boy */
+        /* 2. 控制區修正 */
         .gb-controls { 
             flex: 1; width: 100%; 
             display: flex; flex-direction: column;
             justify-content: space-evenly;
-            padding: 0 35px;
-            padding-bottom: env(safe-area-inset-bottom, 20px);
+            padding: 0 30px;
+            padding-bottom: env(safe-area-inset-bottom, 25px);
         }
 
-        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; position: relative; }
 
-        /* 十字鍵 */
-        .d-pad { position: relative; width: 110px; height: 110px; }
-        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; }
-        #btn-u { top: 0; left: 37px; width: 36px; height: 42px; border-radius: 4px 4px 0 0; }
-        #btn-d { bottom: 0; left: 37px; width: 36px; height: 42px; border-radius: 0 0 4px 4px; }
-        #btn-l { left: 0; top: 37px; width: 42px; height: 36px; border-radius: 4px 0 0 4px; }
-        #btn-r { right: 0; top: 37px; width: 42px; height: 36px; border-radius: 0 4px 4px 0; }
-        #btn-center { top: 37px; left: 37px; width: 36px; height: 36px; background: var(--gb-grey); z-index: 1; }
+        /* 十字鍵修正：確保左上區塊顏色與機身一致 */
+        .d-pad { position: relative; width: 120px; height: 120px; background: transparent; }
+        .d-pad .k { 
+            position: absolute; background: var(--gb-grey); 
+            box-shadow: 0 4px 0 #000; 
+            border: 1px solid #111; 
+            z-index: 2;
+        }
+        #btn-u { top: 0; left: 42px; width: 36px; height: 45px; border-radius: 4px 4px 0 0; }
+        #btn-d { bottom: 0; left: 42px; width: 36px; height: 45px; border-radius: 0 0 4px 4px; }
+        #btn-l { left: 0; top: 42px; width: 45px; height: 36px; border-radius: 4px 0 0 4px; }
+        #btn-r { right: 0; top: 42px; width: 45px; height: 36px; border-radius: 0 4px 4px 0; }
+        #btn-center { top: 42px; left: 42px; width: 36px; height: 36px; background: var(--gb-grey); z-index: 1; box-shadow: none; border: none; }
 
-        /* AB 鍵：比照實機角度 */
+        /* AB 鍵 */
         .action-btns { position: relative; width: 130px; height: 100px; }
         .round-k { 
-            position: absolute; width: 55px; height: 55px; border-radius: 50%; 
+            position: absolute; width: 58px; height: 58px; border-radius: 50%; 
             background: var(--gb-red); border: 2px solid #500;
             display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 20px; color: rgba(255,255,255,0.6);
+            font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.6);
             box-shadow: 0 5px 0 #500;
         }
         #btn-b { left: 0; bottom: 5px; }
         #btn-a { right: 0; top: 5px; }
 
-        /* Select / Start 傾斜橢圓 */
-        .sys-row { display: flex; justify-content: center; gap: 35px; margin-top: -15px; }
+        /* Select / Start */
+        .sys-row { display: flex; justify-content: center; gap: 40px; margin-top: -10px; }
         .sys-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .oval-k { 
-            width: 50px; height: 15px; background: #555; border-radius: 10px;
+            width: 52px; height: 16px; background: #444; border-radius: 10px;
             transform: rotate(-25deg);
-            box-shadow: 0 3px 0 #222;
+            box-shadow: 0 3px 0 #111;
         }
-        .sys-label { font-size: 10px; color: #555; font-weight: bold; transform: rotate(-25deg); }
+        .sys-label { font-size: 10px; color: #444; font-weight: bold; transform: rotate(-25deg); text-shadow: 1px 1px 0 rgba(255,255,255,0.05); }
 
         .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) !important; box-shadow: none !important; filter: brightness(1.2); }
 
@@ -135,13 +137,12 @@
             if (gba && gba.context) {
                 const canvas = document.getElementById('screen');
                 const ctx = canvas.getContext('2d');
-                // 跑馬燈位置固定
                 ctx.fillStyle = "rgba(0,0,0,0.6)";
                 ctx.fillRect(0, 0, 240, 16);
                 ctx.font = "bold 11px monospace";
                 ctx.fillStyle = "#ffffff";
                 ctx.fillText(customMsg, marqueePos, 12);
-                marqueePos -= 0.7;
+                marqueePos -= 0.8;
                 if (marqueePos < -ctx.measureText(customMsg).width) marqueePos = 240;
             }
             requestAnimationFrame(syncLoop);
@@ -231,7 +232,7 @@
             </div>
         </div>
         
-        <div style="text-align:center; color:#444; font-size:9px; font-weight:bold; letter-spacing:3px;">Nintendo GAME BOY</div>
+        <div style="text-align:center; color:#333; font-size:10px; font-weight:bold; letter-spacing:4px; margin-bottom:10px;">Nintendo GAME BOY</div>
     </div>
 
 </body>
