@@ -16,53 +16,71 @@
     <script src="resources/xhr.js"></script>
 
     <style>
-        :root { --p: #6b509c; }
-        /* 嚴格禁止 iOS 預設行為與選取 */
+        :root { --p: #6b509c; --gb-grey: #2d2d2d; --gb-red: #a31a48; --gb-body: #c4c4c4; }
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; }
         body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 畫面增大 (從 35vh 變更為 48vh) */
+        /* 1. 畫面再放大 (提升至 55vh) */
         #game-area { 
             position: relative;
-            width: 100vw; height: 48vh; 
-            display: flex; justify-content: center; align-items: center; 
-            margin-top: env(safe-area-inset-top, 10px);
-            background: #000;
+            width: 100vw; height: 55vh; 
+            display: flex; justify-content: center; align-items: flex-end; 
+            background: #1a1a1a;
+            padding-bottom: 10px;
         }
-        canvas { display: block; max-width: 100%; max-height: 100%; aspect-ratio: 3/2; image-rendering: pixelated; }
-
-        /* 融入式跑馬燈：由核心循環每一幀同步繪製在 Canvas 內部 */
-
-        /* 按鍵區：模仿 Game Boy 實體佈局 */
-        .controls-grid { 
-            flex: 1; width: 100%; display: flex; flex-direction: column; 
-            justify-content: space-evenly; align-items: center;
-            padding-bottom: env(safe-area-inset-bottom, 20px); 
+        canvas { 
+            display: block; width: 92%; max-height: 100%; 
+            aspect-ratio: 3/2; image-rendering: pixelated; 
+            border: 15px solid #333; border-radius: 8px 8px 40px 8px; /* 模擬 Game Boy 螢幕外框 */
         }
-        .row { display: flex; justify-content: center; gap: 15px; width: 100%; }
-        
-        /* 十字鍵樣式 */
-        .cross { position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; }
-        .k { 
-            position: absolute; width: 33.33px; height: 33.33px; 
-            background: #111; border: 1px solid #333; 
-            display: flex; align-items: center; justify-content: center; 
-            color: #fff; font-size: 16px; font-weight: bold;
-        }
-        #btn-u { top: 0; left: 33.33px; border-radius: 4px 4px 0 0; }
-        #btn-d { bottom: 0; left: 33.33px; border-radius: 0 0 4px 4px; }
-        #btn-l { left: 0; top: 33.33px; border-radius: 4px 0 0 4px; }
-        #btn-r { right: 0; top: 33.33px; border-radius: 0 4px 4px 0; }
-        
-        /* 圓形紅色 A/B 鍵 */
-        .round { width: 75px; height: 75px; border-radius: 50%; background: #b22; color: #fff; font-size: 18px; }
-        
-        /* 楕圓 Select/Start 灰色鍵 */
-        .oval { width: 90px; height: 36px; border-radius: 18px; background: #555; color: #fff; font-size: 11px; }
 
-        .k:active { background: #333; transform: scale(0.95); }
-        .round:active { background: #d44; transform: scale(0.95); }
-        .oval:active { background: #777; transform: scale(0.95); }
+        /* 2. 手把區域佈局：左十字、右AB */
+        .gb-controls { 
+            flex: 1; width: 100%; position: relative;
+            background: #222; /* 模擬深色面板 */
+            border-top: 2px solid #444;
+            display: flex; flex-direction: column;
+            justify-content: space-around;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 25px; box-sizing: border-box; }
+
+        /* 經典十字鍵 */
+        .d-pad { position: relative; width: 110px; height: 110px; }
+        .d-pad .k { position: absolute; background: var(--gb-grey); border: 1px solid #111; box-shadow: 0 4px 0 #000; }
+        #btn-u { top: 0; left: 38px; width: 34px; height: 40px; border-radius: 4px 4px 0 0; }
+        #btn-d { bottom: 0; left: 38px; width: 34px; height: 40px; border-radius: 0 0 4px 4px; }
+        #btn-l { left: 0; top: 38px; width: 40px; height: 34px; border-radius: 4px 0 0 4px; }
+        #btn-r { right: 0; top: 38px; width: 40px; height: 34px; border-radius: 0 4px 4px 0; }
+        #btn-center { top: 38px; left: 38px; width: 34px; height: 34px; background: var(--gb-grey); z-index: 1; }
+
+        /* AB 鍵：紅色傾斜 */
+        .action-btns { position: relative; width: 130px; height: 90px; }
+        .round-k { 
+            position: absolute; width: 55px; height: 55px; border-radius: 50%; 
+            background: var(--gb-red); border: 2px solid #500;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 18px; color: rgba(255,255,255,0.8);
+            box-shadow: 0 4px 0 #500;
+        }
+        #btn-b { left: 0; bottom: 0; }
+        #btn-a { right: 0; top: 0; }
+
+        /* Select / Start 橢圓鍵 */
+        .sys-row { display: flex; justify-content: center; gap: 30px; margin-top: 10px; }
+        .oval-k { 
+            width: 60px; height: 18px; background: #666; border-radius: 10px;
+            transform: rotate(-25deg); /* 經典傾斜角度 */
+            box-shadow: 0 3px 0 #333;
+        }
+        .sys-label { font-size: 10px; color: #888; font-weight: bold; margin-top: 25px; transform: rotate(-25deg); }
+
+        /* 按下效果 */
+        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px); box-shadow: none; filter: brightness(1.2); }
+        #btn-a:active, #btn-b:active { transform: translate(0, 2px); }
+
+        #setup-ui, #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
 
     <script>
@@ -70,8 +88,6 @@
         var customMsg = "";
         var charIndex = 0;
         var marqueePos = 240;
-
-        // V21 成功的 KeyboardEvent 注入 keyCode (gbajs 映射)
         const K = { UP:38, DOWN:40, LEFT:37, RIGHT:39, A:90, B:88, START:13, SELECT:16 };
 
         try { gba = new GameBoyAdvance(); } catch (e) { console.error(e); }
@@ -81,11 +97,9 @@
             const msgParam = params.get('msg');
             if (msgParam) {
                 document.getElementById('setup-ui').style.display = 'none';
-                customMsg = " ★ " + decodeURIComponent(msgParam) + " ★ ";
+                customMsg = " ★ " + decodeURIComponent(msgParam).replace(/\n/g, " ") + " ★ ";
                 type();
-            } else {
-                document.getElementById('intro-overlay').style.display = 'none';
-            }
+            } else { document.getElementById('intro-overlay').style.display = 'none'; }
             if (gba) {
                 gba.setCanvas(document.getElementById('screen'));
                 loadRom('resources/bios.bin', (bios) => bios && gba.setBios(bios));
@@ -101,18 +115,16 @@
             } else { document.getElementById('hint').style.opacity = 1; }
         }
 
-        // --- V23：深度同步跑馬燈循環 ---
+        // 同步在 Canvas 內部畫文字條
         function syncLoop() {
             if (gba && gba.context) {
-                // 手動在畫布上每一幀都畫一個文字條，防止被蓋掉
-                const canvas = document.getElementById('screen');
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = "rgba(0,0,0,0.4)";
-                ctx.fillRect(0, 0, 240, 16);
-                ctx.font = "11px monospace";
+                const ctx = document.getElementById('screen').getContext('2d');
+                ctx.fillStyle = "rgba(0,0,0,0.45)";
+                ctx.fillRect(0, 0, 240, 18);
+                ctx.font = "bold 11px monospace";
                 ctx.fillStyle = "#ffffff";
-                ctx.fillText(customMsg, marqueePos, 12);
-                marqueePos -= 1.0;
+                ctx.fillText(customMsg, marqueePos, 13);
+                marqueePos -= 0.8;
                 if (marqueePos < -ctx.measureText(customMsg).width) marqueePos = 240;
             }
             requestAnimationFrame(syncLoop);
@@ -120,9 +132,7 @@
 
         async function runGame() {
             if (charIndex < customMsg.length) return;
-            // 聲音解鎖 (V21 成功的方案)
             if (gba.audio && gba.audio.context) gba.audio.context.resume();
-            
             try {
                 const res = await fetch("game.gba");
                 const blob = await res.blob();
@@ -130,20 +140,14 @@
                     if (result) {
                         gba.runStable();
                         document.getElementById('intro-overlay').style.display = 'none';
-                        syncLoop(); // 啟動同步跑馬燈
+                        syncLoop();
                     }
                 });
-            } catch (e) { alert("Load Error"); }
+            } catch (e) { alert("Load Failed"); }
         }
 
-        // --- 核心：全域事件注入器 ---
         function triggerKey(code, type) {
-            const event = new KeyboardEvent(type, {
-                keyCode: code,
-                which: code,
-                bubbles: true,
-                cancelable: true
-            });
+            const event = new KeyboardEvent(type, { keyCode: code, which: code, bubbles: true });
             window.dispatchEvent(event);
         }
 
@@ -153,18 +157,15 @@
             const end = (e) => { e.preventDefault(); triggerKey(keyCode, 'keyup'); };
             el.addEventListener('touchstart', start, {passive: false});
             el.addEventListener('touchend', end, {passive: false});
-            el.addEventListener('mousedown', start);
-            el.addEventListener('mouseup', end);
         }
 
-        const initButtons = setInterval(() => {
+        const init = setInterval(() => {
             if (gba) {
-                // 將 V21 的 keyCode 綁定到新的實體比照按鈕
                 setupBtn('btn-u', K.UP); setupBtn('btn-d', K.DOWN);
                 setupBtn('btn-l', K.LEFT); setupBtn('btn-r', K.RIGHT);
                 setupBtn('btn-a', K.A); setupBtn('btn-b', K.B);
-                setupBtn('btn-st', K.START); setupBtn('se-marker', K.SELECT);
-                clearInterval(initButtons);
+                setupBtn('btn-st', K.START); setupBtn('btn-se', K.SELECT);
+                clearInterval(init);
             }
         }, 300);
     </script>
@@ -173,7 +174,7 @@
 
     <div id="setup-ui">
         <textarea id="msgInput">庭瑜生日快樂🎂25 forever</textarea><br>
-        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('Copied'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成連結</button>
+        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('已複製連結'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成連結</button>
     </div>
 
     <div id="intro-overlay" onclick="runGame()">
@@ -185,29 +186,33 @@
         <canvas id="screen" width="240" height="160"></canvas>
     </div>
 
-    <div class="controls-grid">
-        <div class="row">
-            <div class="cross">
-                <div class="k" id="btn-u">↑</div>
-                <div class="k" id="btn-d">↓</div>
-                <div class="k" id="btn-l">←</div>
-                <div class="k" id="btn-r">→</div>
+    <div class="gb-controls">
+        <div class="main-row">
+            <div class="d-pad">
+                <div class="k" id="btn-u"></div>
+                <div class="k" id="btn-d"></div>
+                <div class="k" id="btn-l"></div>
+                <div class="k" id="btn-r"></div>
+                <div id="btn-center"></div>
             </div>
-            <div style="font-size: 11px; display: flex; flex-direction: column; gap: 5px;">
-                <span id="st-marker">START</span>
-                <span id="se-marker">SELECT</span>
+            <div class="action-btns">
+                <div class="round-k" id="btn-b">B</div>
+                <div class="round-k" id="btn-a">A</div>
             </div>
         </div>
-        
-        <div class="row" style="gap: 50px;">
-            <div class="round k" id="btn-b">B</div>
-            <div class="round k" id="btn-a">A</div>
-        </div>
-        
-        <div class="row">
-            <div class="oval k" id="btn-st"></div> <div class="oval k" id="btn-se"></div> </div>
 
-        <div style="font-size: 12px; margin-top: 10px;">Nintendo GAME BOY</div>
+        <div class="sys-row">
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <div class="oval-k" id="btn-se"></div>
+                <div class="sys-label">SELECT</div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <div class="oval-k" id="btn-st"></div>
+                <div class="sys-label">START</div>
+            </div>
+        </div>
+        
+        <div style="text-align:center; color:#555; font-size:12px; font-weight:bold; letter-spacing:1px; margin-top:5px;">Nintendo GAME BOY</div>
     </div>
 
 </body>
