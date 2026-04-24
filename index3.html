@@ -20,77 +20,81 @@
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
         body { background: #1a1a1a; color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 核心校正：使用固定比例容器防止裁切 */
+        /* 1. 畫面區域校正：確保整體置中 */
         #game-area { 
-            width: 100vw; height: 50vh; 
+            width: 100vw; height: 48vh; 
             display: flex; justify-content: center; align-items: center; 
-            padding: 20px;
+            padding: 10px;
             margin-top: env(safe-area-inset-top, 10px);
         }
 
+        /* 2. 強化版螢幕框架 */
         .screen-frame {
             position: relative;
             background: #333;
-            padding: 12px;
-            border-radius: 8px 8px 45px 8px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-            /* 確保外框比例跟隨遊戲內容 */
-            display: flex; justify-content: center; align-items: center;
-            width: 100%; max-width: 450px;
+            width: 90vw; max-width: 420px;
+            aspect-ratio: 240 / 185; /* 稍微加高以容納底部圓角造型 */
+            border-radius: 10px 10px 50px 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: flex-start;
+            padding-top: 15px;
         }
 
+        /* 3. Canvas 精準置中與縮小 */
         canvas { 
             display: block; 
-            width: 100%; height: auto;
-            aspect-ratio: 3 / 2; /* GBA 標準比例 */
+            width: 94% !important; /* 稍微縮小防止邊緣切到 */
+            height: auto !important;
+            aspect-ratio: 3 / 2;
             image-rendering: pixelated; 
             background: #000;
-            border: 2px solid #000;
+            border: 4px solid #000; /* 內縮黑邊 */
+            box-shadow: 0 0 5px rgba(0,0,0,1);
         }
 
-        /* 控制區佈局：比照實機 */
+        /* 控制區：完美還原 Game Boy */
         .gb-controls { 
             flex: 1; width: 100%; 
             display: flex; flex-direction: column;
             justify-content: space-evenly;
-            padding: 0 30px;
-            padding-bottom: env(safe-area-inset-bottom, 30px);
+            padding: 0 35px;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
         }
 
         .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
 
         /* 十字鍵 */
         .d-pad { position: relative; width: 110px; height: 110px; }
-        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #1a1a1a; }
+        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; }
         #btn-u { top: 0; left: 37px; width: 36px; height: 42px; border-radius: 4px 4px 0 0; }
         #btn-d { bottom: 0; left: 37px; width: 36px; height: 42px; border-radius: 0 0 4px 4px; }
         #btn-l { left: 0; top: 37px; width: 42px; height: 36px; border-radius: 4px 0 0 4px; }
         #btn-r { right: 0; top: 37px; width: 42px; height: 36px; border-radius: 0 4px 4px 0; }
         #btn-center { top: 37px; left: 37px; width: 36px; height: 36px; background: var(--gb-grey); z-index: 1; }
 
-        /* AB 鍵 */
-        .action-btns { position: relative; width: 130px; height: 90px; }
+        /* AB 鍵：比照實機角度 */
+        .action-btns { position: relative; width: 130px; height: 100px; }
         .round-k { 
-            position: absolute; width: 56px; height: 56px; border-radius: 50%; 
+            position: absolute; width: 55px; height: 55px; border-radius: 50%; 
             background: var(--gb-red); border: 2px solid #500;
             display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 20px; color: rgba(255,255,255,0.7);
+            font-weight: bold; font-size: 20px; color: rgba(255,255,255,0.6);
             box-shadow: 0 5px 0 #500;
         }
-        #btn-b { left: 0; bottom: 0; }
-        #btn-a { right: 0; top: 0; }
+        #btn-b { left: 0; bottom: 5px; }
+        #btn-a { right: 0; top: 5px; }
 
-        /* Select / Start */
-        .sys-row { display: flex; justify-content: center; gap: 40px; margin-top: -10px; }
+        /* Select / Start 傾斜橢圓 */
+        .sys-row { display: flex; justify-content: center; gap: 35px; margin-top: -15px; }
         .sys-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .oval-k { 
-            width: 50px; height: 14px; background: #555; border-radius: 10px;
+            width: 50px; height: 15px; background: #555; border-radius: 10px;
             transform: rotate(-25deg);
             box-shadow: 0 3px 0 #222;
         }
-        .sys-label { font-size: 9px; color: #666; font-weight: bold; transform: rotate(-25deg); }
+        .sys-label { font-size: 10px; color: #555; font-weight: bold; transform: rotate(-25deg); }
 
-        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) !important; box-shadow: none !important; filter: brightness(1.3); }
+        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) !important; box-shadow: none !important; filter: brightness(1.2); }
 
         #setup-ui, #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
@@ -131,13 +135,13 @@
             if (gba && gba.context) {
                 const canvas = document.getElementById('screen');
                 const ctx = canvas.getContext('2d');
-                // 跑馬燈繪製：座標校正
-                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                // 跑馬燈位置固定
+                ctx.fillStyle = "rgba(0,0,0,0.6)";
                 ctx.fillRect(0, 0, 240, 16);
                 ctx.font = "bold 11px monospace";
                 ctx.fillStyle = "#ffffff";
                 ctx.fillText(customMsg, marqueePos, 12);
-                marqueePos -= 0.8;
+                marqueePos -= 0.7;
                 if (marqueePos < -ctx.measureText(customMsg).width) marqueePos = 240;
             }
             requestAnimationFrame(syncLoop);
@@ -187,7 +191,7 @@
 
     <div id="setup-ui">
         <textarea id="msgInput">庭瑜生日快樂🎂25 forever</textarea><br>
-        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('已複製連結'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成連結</button>
+        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('連結已複製'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成連結</button>
     </div>
 
     <div id="intro-overlay" onclick="runGame()">
@@ -227,7 +231,7 @@
             </div>
         </div>
         
-        <div style="text-align:center; color:#444; font-size:10px; font-weight:bold; letter-spacing:1px; margin-bottom: 5px;">Nintendo GAME BOY</div>
+        <div style="text-align:center; color:#444; font-size:9px; font-weight:bold; letter-spacing:3px;">Nintendo GAME BOY</div>
     </div>
 
 </body>
