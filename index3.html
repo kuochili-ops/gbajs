@@ -20,48 +20,48 @@
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
         body { background: var(--body-bg); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 1. 遊戲畫面區域：縮小並絕對置中 */
+        /* 1. 遊戲區域：調整比例讓螢幕大一點 */
         #game-area { 
-            width: 100vw; height: 45vh; 
+            width: 100vw; height: 46vh; 
             display: flex; justify-content: center; align-items: center; 
-            padding: 20px;
+            padding: 15px;
             margin-top: env(safe-area-inset-top, 10px);
         }
 
         .screen-frame {
             position: relative;
             background: #333;
-            width: 88vw; max-width: 400px;
-            aspect-ratio: 240 / 180;
-            border-radius: 10px 10px 50px 10px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.8);
-            display: flex; justify-content: center; align-items: center; /* 內部元素完全置中 */
+            width: 92vw; max-width: 420px;
+            aspect-ratio: 240 / 182;
+            border-radius: 12px 12px 55px 12px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: center;
         }
 
         canvas { 
             display: block; 
-            width: 80% !important; /* 縮小比例以確保不被裁切 */
+            width: 90% !important; /* 放大至 90%：兼顧清晰度與邊界安全 */
             height: auto !important;
             aspect-ratio: 3 / 2;
             image-rendering: pixelated; 
             background: #000;
-            border: 2px solid #000;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            border: 2px solid #111;
+            box-shadow: 0 0 20px rgba(0,0,0,0.6);
         }
 
-        /* 2. 控制區修正 */
+        /* 2. 十字鍵區域：徹底移除左上方多餘區塊 */
         .gb-controls { 
             flex: 1; width: 100%; 
             display: flex; flex-direction: column;
             justify-content: space-evenly;
-            padding: 0 30px;
+            padding: 0 35px;
             padding-bottom: env(safe-area-inset-bottom, 25px);
         }
 
-        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; position: relative; }
+        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
 
-        /* 十字鍵修正：確保左上區塊顏色與機身一致 */
-        .d-pad { position: relative; width: 120px; height: 120px; background: transparent; }
+        .d-pad { position: relative; width: 120px; height: 120px; }
+        /* 僅保留上下左右與中心，不使用背景層防止色偏 */
         .d-pad .k { 
             position: absolute; background: var(--gb-grey); 
             box-shadow: 0 4px 0 #000; 
@@ -75,26 +75,26 @@
         #btn-center { top: 42px; left: 42px; width: 36px; height: 36px; background: var(--gb-grey); z-index: 1; box-shadow: none; border: none; }
 
         /* AB 鍵 */
-        .action-btns { position: relative; width: 130px; height: 100px; }
+        .action-btns { position: relative; width: 140px; height: 110px; }
         .round-k { 
-            position: absolute; width: 58px; height: 58px; border-radius: 50%; 
+            position: absolute; width: 60px; height: 60px; border-radius: 50%; 
             background: var(--gb-red); border: 2px solid #500;
             display: flex; align-items: center; justify-content: center;
             font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.6);
-            box-shadow: 0 5px 0 #500;
+            box-shadow: 0 6px 0 #500;
         }
-        #btn-b { left: 0; bottom: 5px; }
-        #btn-a { right: 0; top: 5px; }
+        #btn-b { left: 0; bottom: 0; }
+        #btn-a { right: 0; top: 0; }
 
         /* Select / Start */
-        .sys-row { display: flex; justify-content: center; gap: 40px; margin-top: -10px; }
-        .sys-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .sys-row { display: flex; justify-content: center; gap: 40px; }
+        .sys-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .oval-k { 
-            width: 52px; height: 16px; background: #444; border-radius: 10px;
+            width: 55px; height: 18px; background: #444; border-radius: 10px;
             transform: rotate(-25deg);
             box-shadow: 0 3px 0 #111;
         }
-        .sys-label { font-size: 10px; color: #444; font-weight: bold; transform: rotate(-25deg); text-shadow: 1px 1px 0 rgba(255,255,255,0.05); }
+        .sys-label { font-size: 10px; color: #444; font-weight: bold; transform: rotate(-25deg); }
 
         .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) !important; box-shadow: none !important; filter: brightness(1.2); }
 
@@ -137,7 +137,8 @@
             if (gba && gba.context) {
                 const canvas = document.getElementById('screen');
                 const ctx = canvas.getContext('2d');
-                ctx.fillStyle = "rgba(0,0,0,0.6)";
+                // 跑馬燈遮罩稍微調淡 (0.4) 減少對畫面的遮擋
+                ctx.fillStyle = "rgba(0,0,0,0.4)";
                 ctx.fillRect(0, 0, 240, 16);
                 ctx.font = "bold 11px monospace";
                 ctx.fillStyle = "#ffffff";
@@ -232,7 +233,7 @@
             </div>
         </div>
         
-        <div style="text-align:center; color:#333; font-size:10px; font-weight:bold; letter-spacing:4px; margin-bottom:10px;">Nintendo GAME BOY</div>
+        <div style="text-align:center; color:#333; font-size:10px; font-weight:bold; letter-spacing:4px;">Nintendo GAME BOY</div>
     </div>
 
 </body>
