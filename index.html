@@ -32,24 +32,23 @@
             display: flex; justify-content: center; align-items: center;
         }
 
+        /* 修正：移除固定 aspect-ratio，改由內容撐開，確保不裁切右下方 */
         #screen-inner {
             position: relative;
-            width: 92%;
-            aspect-ratio: 3 / 2;
-            background: var(--screen-green);
+            width: 94%;
+            min-height: 60%;
+            background: #000; /* 底色黑化，解決綠邊殘留問題 */
             border: 4px solid #111;
-            border-radius: 2px;
-            overflow: hidden;
+            border-radius: 4px;
+            overflow: hidden; 
             display: flex; justify-content: center; align-items: center;
         }
 
-        /* 修正：96% 寬度並絕對居中，解決偏左上與過大問題 */
+        /* 遊戲畫布：確保寬度填滿且高度自適應，不使用 absolute 避免座標偏移 */
         canvas { 
             display: none; 
-            position: absolute;
-            top: 50% !important; left: 50% !important;
-            transform: translate(-50%, -50.5%) !important; /* 稍微下修正 0.5% 解決視覺偏上 */
-            width: 96% !important; height: auto !important; 
+            width: 100% !important; 
+            height: auto !important; 
             image-rendering: pixelated; 
             z-index: 5;
         }
@@ -62,12 +61,12 @@
             background: var(--screen-green);
         }
 
-        /* 跑馬燈：底色調淺，避免遮擋 */
+        /* 跑馬燈：透明度調至 0.25，文字加陰影增強辨識度 */
         #marquee-bar {
             position: absolute; top: 0; left: 0; width: 100%;
-            background: rgba(0, 0, 0, 0.35); /* 更輕薄的半透明 */
+            background: rgba(0, 0, 0, 0.25); 
             color: #fff; 
-            text-shadow: 1px 1px 2px #000;
+            text-shadow: 1px 1px 2px #000, 0 0 5px rgba(0,0,0,0.8);
             font-family: monospace; font-size: 11px;
             padding: 5px 0; white-space: nowrap; overflow: hidden;
             display: none; z-index: 110;
@@ -76,6 +75,7 @@
         #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 12s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
+        /* 控制器修正：徹底移除十字鍵左上角殘影 (紅叉區域) */
         .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
@@ -85,7 +85,12 @@
         #btn-d { bottom: 0; left: 44px; width: 38px; height: 48px; border-radius: 0 0 4px 4px; }
         #btn-l { left: 0; top: 44px; width: 48px; height: 38px; border-radius: 4px 0 0 4px; }
         #btn-r { right: 0; top: 44px; width: 48px; height: 38px; border-radius: 0 4px 4px 0; }
-        #btn-center { top: 44px; left: 44px; width: 38px; height: 38px; background: var(--gb-body); border: none; z-index: 5; }
+        
+        /* 十字鍵中心與角落背景設為透明，避免出現色塊 */
+        #btn-center { 
+            top: 44px; left: 44px; width: 38px; height: 38px; 
+            background: transparent; border: none; z-index: 5; 
+        }
 
         .action-btns { position: relative; width: 150px; height: 120px; }
         .round-k { position: absolute; width: 64px; height: 64px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; color: rgba(255,255,255,0.7); box-shadow: 0 6px 0 #500; }
