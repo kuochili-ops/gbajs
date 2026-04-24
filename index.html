@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>𓃥 白六 互動實驗室</title>
     
@@ -11,16 +11,17 @@
     <script src="js/thumb.js"></script>
     <script src="js/mmu.js"></script>
     <script src="js/io.js"></script>
-    <script src="js/irq.js"></script>
-    <script src="js/keypad.js"></script>
-    <script src="js/sio.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/video.js"></script>
     <script src="js/video/proxy.js"></script>
     <script src="js/video/software.js"></script>
+    <script src="js/irq.js"></script>
+    <script src="js/keypad.js"></script>
+    <script src="js/sio.js"></script>
     <script src="js/savedata.js"></script>
     <script src="js/gpio.js"></script>
     <script src="js/gba.js"></script>
+    <script src="resources/xhr.js"></script>
 
     <style>
         :root { --p: #6b509c; }
@@ -29,44 +30,25 @@
         #screen-container { position: relative; width: 320px; height: 213px; margin-top: 40px; background: #111; border: 4px solid #333; border-radius: 8px; overflow: hidden; box-shadow: 0 0 20px rgba(107, 80, 156, 0.3); }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 
-        /* Serena 專屬打字機遮罩 */
-        #intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 30px; box-sizing: border-box; transition: opacity 0.5s; }
+        /* 打字機遮罩 */
+        #intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; padding: 30px; box-sizing: border-box; }
         #typewriter { font-family: "Courier New", monospace; font-size: 18px; line-height: 1.6; min-height: 120px; white-space: pre-wrap; }
         .hint { margin-top: 50px; color: var(--p); font-size: 13px; opacity: 0; transition: 1s; letter-spacing: 2px; }
 
-        /* 手機版虛擬控制器 */
-        .controls { display: flex; gap: 40px; margin-top: 50px; padding-bottom: 20px; }
-        .k { width: 80px; height: 80px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #444; touch-action: none; -webkit-user-select: none; font-size: 20px; }
+        /* 虛擬按鍵 */
+        .controls { display: flex; gap: 40px; margin-top: 60px; }
+        .k { width: 80px; height: 80px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #444; touch-action: none; -webkit-user-select: none; font-size: 20px; color: #eee; }
         .k:active { background: var(--p); transform: scale(0.9); border-color: #fff; }
         
-        #status { margin-top: 15px; font-size: 11px; color: #555; letter-spacing: 1px; }
+        #status { margin-top: 15px; font-size: 11px; color: #444; letter-spacing: 1px; }
     </style>
-</head>
-<body>
-
-    <div id="intro-overlay">
-        <div id="typewriter"></div>
-        <div class="hint" id="hint">● 點擊螢幕開啟冒險 ●</div>
-    </div>
-
-    <div id="screen-container">
-        <canvas id="screen" width="240" height="160"></canvas>
-    </div>
-
-    <div id="status">INIT_SYSTEM...</div>
-
-    <div class="controls">
-        <div class="k" id="btn-left">←</div>
-        <div class="k" id="btn-a">A</div>
-        <div class="k" id="btn-right">→</div>
-    </div>
 
     <script>
-        const message = "System: White 6 Project v5.0\n--------------------------\nTarget: Serena\nStatus: Link Established\n\n你好，Serena。\n這是一個專屬於妳的互動空間。";
+        var gba;
+        const message = "System: White 6 Project v6.0\n--------------------------\nTarget: Serena\nStatus: Link Stable\n\n你好，Serena。\n這是一個專屬於妳的遊戲空間。";
         let charIndex = 0;
-        let gba;
 
-        // 1. 打字機效果
+        // 打字機效果
         function type() {
             const container = document.getElementById('typewriter');
             if (charIndex < message.length) {
@@ -78,83 +60,94 @@
             }
         }
 
-        // 2. 核心與 ROM 載入邏輯
+        // 核心初始化 (參考官方邏輯)
+        try {
+            gba = new GameBoyAdvance();
+            gba.keypad.eatInput = true;
+        } catch (exception) {
+            gba = null;
+        }
+
         window.onload = function() {
             type();
-            const statusEl = document.getElementById('status');
-            
-            try {
-                // 初始化模擬器
-                gba = new GameBoyAdvance();
-                gba.setCanvas(document.getElementById('screen'));
+            if (gba) {
+                var canvas = document.getElementById('screen');
+                gba.setCanvas(canvas);
                 gba.logLevel = gba.LOG_ERROR;
 
-                // 強制刷新緩存的 ROM 讀取方式
-                statusEl.innerText = "正在連線數據中心 (FETCHING)...";
-                const romUrl = "game.gba?t=" + new Date().getTime();
+                // 自動載入根目錄的 game.gba
+                var statusEl = document.getElementById('status');
+                statusEl.innerText = "正在同步遠端數據...";
 
-                fetch(romUrl)
+                // 使用官方 xhr.js 提供的 loadRom 功能 (如果有的話) 或是標準 fetch
+                fetch("game.gba?v=" + Date.now())
                     .then(res => {
-                        if (!res.ok) throw new Error("ROM_NOT_FOUND (404)");
+                        if (!res.ok) throw new Error("ROM_NOT_FOUND");
                         return res.arrayBuffer();
                     })
                     .then(buffer => {
-                        gba.loadRom(buffer, (res) => {
-                            if (res) {
+                        gba.loadRom(buffer, function(result) {
+                            if (result) {
                                 statusEl.innerText = "✅ 數據同步完成";
                             } else {
-                                statusEl.innerText = "❌ ROM 解析失敗";
+                                statusEl.innerText = "❌ 數據解析失敗";
                             }
                         });
                     })
                     .catch(err => {
-                        statusEl.innerText = "❌ " + err.message;
-                        console.error(err);
+                        statusEl.innerText = "❌ 無法讀取 game.gba";
                     });
-
-            } catch (e) {
-                statusEl.innerText = "❌ 核心初始化失敗";
             }
         }
 
-        // 3. 點擊進入
-        document.getElementById('intro-overlay').onclick = function() {
+        // 進入遊戲
+        function startAdventure() {
             if (charIndex >= message.length) {
-                this.style.opacity = 0;
-                setTimeout(() => this.style.display = 'none', 500);
+                var overlay = document.getElementById('intro-overlay');
+                overlay.style.opacity = 0;
+                setTimeout(() => overlay.style.display = 'none', 500);
                 if (gba) {
-                    gba.runStable(); // 使用更穩定的官方執行模式
-                    // 恢復音訊 (解決瀏覽器自動靜音限制)
-                    if (gba.audio && gba.audio.context) {
-                        gba.audio.context.resume();
-                    }
+                    gba.runStable();
+                    if (gba.audio && gba.audio.context) gba.audio.context.resume();
                 }
             }
-        };
-
-        // 4. 按鍵綁定
-        function bind(id, key) {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                if(gba && gba.keypad) gba.keypad.keydown(key);
-            }, {passive: false});
-            el.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                if(gba && gba.keypad) gba.keypad.keyup(key);
-            }, {passive: false});
         }
 
-        // 等待核心就緒後綁定
-        const checkTimer = setInterval(() => {
+        // 按鍵綁定
+        function bind(id, key) {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); gba.keypad.keydown(key); });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); gba.keypad.keyup(key); });
+        }
+
+        const checkGBA = setInterval(() => {
             if (gba && gba.keypad) {
-                // A:0, LEFT:5, RIGHT:4
                 bind('btn-a', gba.keypad.A);
                 bind('btn-left', gba.keypad.LEFT);
                 bind('btn-right', gba.keypad.RIGHT);
-                clearInterval(checkTimer);
+                clearInterval(checkGBA);
             }
         }, 500);
     </script>
+</head>
+<body>
+
+    <div id="intro-overlay" onclick="startAdventure()">
+        <div id="typewriter"></div>
+        <div class="hint" id="hint">● 點擊螢幕開啟冒險 ●</div>
+    </div>
+
+    <div id="screen-container">
+        <canvas id="screen" width="240" height="160"></canvas>
+    </div>
+
+    <div id="status">INIT_CORE...</div>
+
+    <div class="controls">
+        <div class="k" id="btn-left">←</div>
+        <div class="k" id="btn-a">A</div>
+        <div class="k" id="btn-right">→</div>
+    </div>
+
 </body>
 </html>
