@@ -30,21 +30,20 @@
         
         #game-area {
             width: 100vw; height: 35vh; display: flex; justify-content: center; align-items: center;
-            margin-top: env(safe-area-inset-top, 10px); background: #000; position: relative;
+            margin-top: env(safe-area-inset-top, 10px); background: #000;
         }
         canvas { display: block; max-width: 100%; max-height: 100%; aspect-ratio: 3 / 2; image-rendering: pixelated; }
 
-        /* 按鍵區：模仿官網佈局與觸發深度 */
         .pad { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding-bottom: env(safe-area-inset-bottom, 25px); }
         .row { display: flex; justify-content: center; gap: 12px; width: 100%; }
         .k { 
-            width: 72px; height: 72px; background: rgba(255,255,255,0.1); 
-            border: 2px solid #333; border-radius: 50%; 
+            width: 74px; height: 74px; background: rgba(255,255,255,0.15); 
+            border: 2px solid #444; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             font-size: 18px; font-weight: bold; color: #fff;
-            box-shadow: 0 4px 0 #222; /* 增加視覺按壓感 */
+            box-shadow: 0 4px 0 #222;
         }
-        .sys { width: 85px; height: 32px; border-radius: 6px; font-size: 11px; box-shadow: 0 2px 0 #222; }
+        .sys { width: 90px; height: 36px; border-radius: 8px; font-size: 12px; background: rgba(255,255,255,0.1); }
         .k:active { background: var(--p); transform: translateY(3px); box-shadow: none; border-color: #fff; }
 
         #setup-ui, #intro-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
@@ -58,7 +57,7 @@
 
         try {
             gba = new GameBoyAdvance();
-            // 參考官網：不直接吃掉輸入，讓自定義 Keypad 接管
+            // 重要：取消預設吃掉輸入，改用自定義處理
             gba.keypad.eatInput = false;
         } catch (e) { console.error(e); }
 
@@ -87,7 +86,6 @@
             } else { document.getElementById('hint').style.opacity = 1; }
         }
 
-        // 官網風格的跑馬燈注入
         function drawMarquee() {
             const canvas = document.getElementById('screen');
             const ctx = canvas.getContext('2d');
@@ -108,17 +106,10 @@
 
         async function runGame() {
             if (charIndex < customMsg.length) return;
-            
-            // --- 參考官網：強制重啟 Audio 鏈條 ---
+            // 解鎖音訊
             if (gba.audio && gba.audio.context) {
-                const ctx = gba.audio.context;
-                ctx.resume();
-                // 官網行為：建立一個空的定時器來維持 Audio 線程
-                const source = ctx.createBufferSource();
-                source.connect(ctx.destination);
-                source.start(0);
+                gba.audio.context.resume();
             }
-
             try {
                 const res = await fetch("game.gba");
                 const blob = await res.blob();
@@ -129,52 +120,75 @@
                         drawMarquee();
                     }
                 });
-            } catch (e) { alert("ROM LOAD ERROR"); }
+            } catch (e) { alert("ERROR"); }
         }
 
-        // --- 核心：官網級按鍵綁定邏輯 ---
-        function bind(id, gbaKeyCode) {
+        // --- 核心改進：模擬官網鍵盤事件處理 ---
+        function bind(id, gbaKey) {
             const el = document.getElementById(id);
             
-            const handleDown = (e) => {
+            // 參考官網：建立模擬事件
+            const press = (e) => {
                 if (e.cancelable) e.preventDefault();
-                // 參考官網：模擬一個包含 keyCode 的事件對象傳給 keypad
-                gba.keypad.keydown(gbaKeyCode);
+                e.stopPropagation();
+                // 直接調用內部的鍵盤處理函數，而非高層介面
+                if (gba.keypad.keyboard) {
+                    gba.keypad.keyboard.processKey({
+                        keyCode: gbaKey,
+                        type: 'keydown',
+                        preventDefault: () => {}
+                    });
+                } else {
+                    gba.keypad.keydown(gbaKey);
+                }
             };
 
-            const handleUp = (e) => {
+            const release = (e) => {
                 if (e.cancelable) e.preventDefault();
-                gba.keypad.keyup(gbaKeyCode);
+                e.stopPropagation();
+                if (gba.keypad.keyboard) {
+                    gba.keypad.keyboard.processKey({
+                        keyCode: gbaKey,
+                        type: 'keyup',
+                        preventDefault: () => {}
+                    });
+                } else {
+                    gba.keypad.keyup(gbaKey);
+                }
             };
 
-            el.addEventListener('touchstart', handleDown, { passive: false });
-            el.addEventListener('touchend', handleUp, { passive: false });
-            el.addEventListener('mousedown', handleDown);
-            el.addEventListener('mouseup', handleUp);
+            el.addEventListener('touchstart', press, { passive: false });
+            el.addEventListener('touchend', release, { passive: false });
+            el.addEventListener('mousedown', press);
+            el.addEventListener('mouseup', release);
         }
 
         const checkGBA = setInterval(() => {
             if (gba && gba.keypad) {
-                // 使用 gbajs 內建的按鍵映射表
-                bind('u', gba.keypad.UP); bind('d', gba.keypad.DOWN);
-                bind('l', gba.keypad.LEFT); bind('r', gba.keypad.RIGHT);
-                bind('a', gba.keypad.A); bind('b', gba.keypad.B);
-                bind('st', gba.keypad.START); bind('se', gba.keypad.SELECT);
+                // 這裡傳入的是 GBA 鍵盤映射碼
+                bind('u', gba.keypad.UP);
+                bind('d', gba.keypad.DOWN);
+                bind('l', gba.keypad.LEFT);
+                bind('r', gba.keypad.RIGHT);
+                bind('a', gba.keypad.A);
+                bind('b', gba.keypad.B);
+                bind('st', gba.keypad.START);
+                bind('se', gba.keypad.SELECT);
                 clearInterval(checkGBA);
             }
-        }, 200);
+        }, 300);
     </script>
 </head>
 <body>
 
     <div id="setup-ui">
         <textarea id="msgInput">庭瑜生日快樂🎂25 forever</textarea><br>
-        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('Copied!'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成連結</button>
+        <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('Copied'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成連結</button>
     </div>
 
     <div id="intro-overlay" onclick="runGame()">
         <div id="typewriter" style="padding:20px; font-family: monospace; line-height: 1.6;"></div>
-        <div id="hint" style="margin-top:40px; opacity:0; color:var(--p); font-size:12px;">● CLICK TO ADVENTURE (音效解鎖) ●</div>
+        <div id="hint" style="margin-top:40px; opacity:0; color:var(--p); font-size:12px;">● CLICK TO ADVENTURE ●</div>
     </div>
 
     <div id="game-area">
@@ -192,9 +206,9 @@
             <div class="k" id="d">↓</div>
             <div class="k" id="r">→</div>
         </div>
-        <div class="row" style="gap: 45px; margin-top: 5px;">
-            <div class="k" id="b" style="color:#ff6b6b; border-color:#622;">B</div>
-            <div class="k" id="a" style="color:#51cf66; border-color:#262;">A</div>
+        <div class="row" style="gap: 50px; margin-top: 5px;">
+            <div class="k" id="b" style="background:rgba(255,80,80,0.2);">B</div>
+            <div class="k" id="a" style="background:rgba(80,255,80,0.2);">A</div>
         </div>
     </div>
 
