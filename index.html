@@ -16,15 +16,15 @@
     <script src="resources/xhr.js"></script>
 
     <style>
-        :root { --p: #6b509c; --gb-body: #d2d2d2; --gb-grey: #2d2d2d; --gb-red: #a31a48; --body-bg: #1a1a1a; --screen-green: #9bbc0f; }
+        :root { --p: #6b509c; --gb-body: #1a1a1a; --gb-grey: #2d2d2d; --gb-red: #a31a48; --screen-green: #9bbc0f; }
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
-        body { background: var(--body-bg); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        body { background: var(--gb-body); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
         #game-area { width: 100vw; height: 46vh; display: flex; justify-content: center; align-items: center; padding: 15px; margin-top: env(safe-area-inset-top, 10px); }
 
         .screen-frame {
             position: relative;
-            background: #333; /* 螢幕黑色外框 */
+            background: #333;
             width: 92vw; max-width: 420px;
             aspect-ratio: 240 / 185;
             border-radius: 12px 12px 55px 12px;
@@ -39,19 +39,20 @@
             aspect-ratio: 3 / 2;
             background: var(--screen-green);
             border: 4px solid #111;
+            border-radius: 4px;
             overflow: hidden;
         }
 
-        /* 遊戲畫布：配合螢幕長寬縮小一點 */
+        /* 遊戲畫布：調校後的 92% 寬度，完美符合內框 */
         canvas { 
             display: none; 
             position: absolute;
-            top: 55%; left: 50%; /* 稍微下移一點給跑馬燈留白 */
+            top: 55%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 88% !important; height: auto !important; 
+            width: 92% !important; height: auto !important; 
             image-rendering: pixelated; 
             z-index: 5;
-            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 2px;
         }
 
         #intro-layer {
@@ -73,7 +74,6 @@
         #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 10s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 控制器：顏色優化 */
         .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 35px; padding-bottom: env(safe-area-inset-bottom, 25px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
@@ -83,10 +83,11 @@
         #btn-d { bottom: 0; left: 42px; width: 36px; height: 45px; border-radius: 0 0 4px 4px; }
         #btn-l { left: 0; top: 42px; width: 45px; height: 36px; border-radius: 4px 0 0 4px; }
         #btn-r { right: 0; top: 42px; width: 45px; height: 36px; border-radius: 0 4px 4px 0; }
-        /* 關鍵修正：中心基座改為與機體顏色一致的灰色 (或背景色) */
+        
+        /* 核心優化：中心基座背景設為透明，直接透出機身背景顏色 */
         #btn-center { 
             top: 42px; left: 42px; width: 36px; height: 36px; 
-            background: transparent; /* 讓它完全透明，透出背景顏色 */
+            background: transparent; 
             border: none; box-shadow: none; z-index: 5; 
         }
 
