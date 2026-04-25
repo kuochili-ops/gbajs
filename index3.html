@@ -18,6 +18,7 @@
     <style>
         :root { --p: #6b509c; --gb-body: #1a1a1a; --gb-grey: #2d2d2d; --gb-red: #a31a48; --screen-green: #9bbc0f; }
         
+        /* 核心防護：封鎖所有選取、放大鏡與長按觸發事件 */
         * { 
             -webkit-tap-highlight-color: transparent; 
             -webkit-touch-callout: none; 
@@ -31,13 +32,14 @@
         body { 
             background: var(--gb-body); 
             color: #fff; 
+            font-family: -apple-system, sans-serif; 
             margin: 0; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             height: 100vh; 
             overflow: hidden; 
-            position: fixed;
+            position: fixed; 
             width: 100%;
         }
         
@@ -72,19 +74,6 @@
             z-index: 5;
         }
 
-        /* 浮動提示標籤 */
-        #action-toast {
-            position: absolute; bottom: 15%; left: 50%;
-            transform: translateX(-50%);
-            background: rgba(107, 80, 156, 0.7);
-            color: white; padding: 4px 12px; border-radius: 15px;
-            font-size: 11px; font-weight: bold;
-            opacity: 0; transition: opacity 0.2s, transform 0.2s;
-            z-index: 120; pointer-events: none;
-            white-space: nowrap;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-
         #intro-layer {
             position: absolute; inset: 0;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -104,28 +93,20 @@
         #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 12s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 控制器：按壓效果優化 */
         .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; }
-        
         .d-pad { position: relative; width: 120px; height: 120px; }
-        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; z-index: 10; transition: all 0.05s; }
-        .d-pad .k.pressed { transform: scale(0.92); box-shadow: 0 1px 0 #000; background: #222; }
-        
+        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; z-index: 10; }
         #btn-u { top: 0; left: 42px; width: 36px; height: 46px; border-radius: 4px 4px 0 0; }
         #btn-d { bottom: 0; left: 42px; width: 36px; height: 46px; border-radius: 0 0 4px 4px; }
         #btn-l { left: 0; top: 42px; width: 46px; height: 36px; border-radius: 4px 0 0 4px; }
         #btn-r { right: 0; top: 42px; width: 46px; height: 36px; border-radius: 0 4px 4px 0; }
-
         .action-btns { position: relative; width: 140px; height: 110px; }
-        .round-k { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.7); box-shadow: 0 5px 0 #500; transition: all 0.05s; }
-        .round-k.pressed { transform: translateY(4px); box-shadow: 0 1px 0 #500; filter: brightness(0.8); }
+        .round-k { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.7); box-shadow: 0 5px 0 #500; }
         #btn-b { left: 0; bottom: 0; }
         #btn-a { right: 0; top: 0; }
-
         .sys-row { display: flex; justify-content: center; gap: 40px; }
         .oval-k { width: 54px; height: 18px; background: #444; border-radius: 10px; transform: rotate(-25deg); box-shadow: 0 3px 0 #111; }
-        .oval-k.pressed { transform: rotate(-25deg) translateY(2px); box-shadow: 0 1px 0 #111; }
         .sys-label { font-size: 10px; color: #444; font-weight: bold; transform: rotate(-25deg); margin-top: 5px; }
 
         #setup-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
@@ -135,20 +116,29 @@
         var gba;
         var customMsg = "";
         var charIndex = 0;
-        var toastTimer;
         const K = { UP:38, DOWN:40, LEFT:37, RIGHT:39, A:90, B:88, START:13, SELECT:16 };
 
-        window.oncontextmenu = function(e) { e.preventDefault(); return false; };
+        // 全域攔截右鍵與長按選單
+        window.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); return false; };
 
-        try { gba = new GameBoyAdvance(); gba.keypad.eatInput = true; } catch (e) { console.error(e); }
+        try { 
+            gba = new GameBoyAdvance(); 
+            gba.keypad.eatInput = true; 
+        } catch (e) { console.error(e); }
 
         window.onload = function() {
             const params = new URLSearchParams(window.location.search);
             const msgParam = params.get('msg');
-            customMsg = msgParam ? decodeURIComponent(msgParam) : "親友們❤️早安";
-            document.getElementById('msgInput').value = customMsg;
+            if (msgParam) {
+                document.getElementById('setup-ui').style.display = 'none';
+                customMsg = decodeURIComponent(msgParam);
+            } else {
+                customMsg = "親友們❤️早安";
+                document.getElementById('msgInput').value = customMsg;
+            }
             document.getElementById('marquee-text').innerText = " ★ " + customMsg + " ★ ";
             type();
+
             if (gba) {
                 gba.setCanvas(document.getElementById('screen'));
                 loadRom('resources/bios.bin', (bios) => bios && gba.setBios(bios));
@@ -166,7 +156,14 @@
 
         async function runGame() {
             if (charIndex < customMsg.length) return;
-            if (gba.audio && gba.audio.context && gba.audio.context.state === 'suspended') gba.audio.context.resume();
+            
+            // 解鎖音訊
+            if (gba.audio && gba.audio.context) {
+                if (gba.audio.context.state === 'suspended') {
+                    gba.audio.context.resume();
+                }
+            }
+
             try {
                 const res = await fetch("game.gba");
                 const blob = await res.blob();
@@ -181,62 +178,29 @@
             } catch (e) { alert("ROM Load Failed"); }
         }
 
-        function showActionMsg(dir) {
-            const toast = document.getElementById('action-toast');
-            const messages = {
-                'UP': '角色正在向上爬 ➚',
-                'DOWN': '角色正在向下移 ➘',
-                'LEFT': '角色向左探索 ⇠',
-                'RIGHT': '角色向右前進 ⇢',
-                'A': '使用技能 / 跳躍 ⚡',
-                'B': '加速衝刺中 💨'
-            };
-            if (!messages[dir]) return;
-            toast.innerText = messages[dir];
-            toast.style.opacity = 1;
-            toast.style.transform = 'translateX(-50%) translateY(-5px)';
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => { 
-                toast.style.opacity = 0; 
-                toast.style.transform = 'translateX(-50%) translateY(0px)';
-            }, 600);
-        }
+        function triggerKey(code, type) { window.dispatchEvent(new KeyboardEvent(type, { keyCode: code })); }
 
-        function triggerKey(code, type, dirName, element) {
-            window.dispatchEvent(new KeyboardEvent(type, { keyCode: code }));
-            if (type === 'keydown') {
-                if (element) element.classList.add('pressed');
-                if (dirName) showActionMsg(dirName);
-            } else if (type === 'keyup') {
-                if (element) element.classList.remove('pressed');
-            }
-        }
-
-        function setupBtn(id, keyCode, dirName) {
+        function setupBtn(id, keyCode) {
             const el = document.getElementById(id);
             el.addEventListener('touchstart', (e) => { 
                 e.preventDefault(); 
                 if(id === 'btn-st') runGame();
-                triggerKey(keyCode, 'keydown', dirName, el); 
+                triggerKey(keyCode, 'keydown'); 
             }, {passive: false});
-            el.addEventListener('touchend', (e) => { 
-                e.preventDefault(); 
-                triggerKey(keyCode, 'keyup', dirName, el); 
-            }, {passive: false});
+            el.addEventListener('touchend', (e) => { e.preventDefault(); triggerKey(keyCode, 'keyup'); }, {passive: false});
         }
 
         const init = setInterval(() => {
             if (gba) {
-                const names = ['UP','DOWN','LEFT','RIGHT','A','B','START','SELECT'];
-                const ids = ['btn-u','btn-d','btn-l','btn-r','btn-a','btn-b','btn-st','btn-se'];
-                const keys = [K.UP, K.DOWN, K.LEFT, K.RIGHT, K.A, K.B, K.START, K.SELECT];
-                ids.forEach((id, idx) => setupBtn(id, keys[idx], names[idx]));
+                const b = ['btn-u','btn-d','btn-l','btn-r','btn-a','btn-b','btn-st','btn-se'];
+                const k = [K.UP, K.DOWN, K.LEFT, K.RIGHT, K.A, K.B, K.START, K.SELECT];
+                b.forEach((id, idx) => setupBtn(id, k[idx]));
                 clearInterval(init);
             }
         }, 300);
     </script>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
     <div id="setup-ui">
         <textarea id="msgInput">親友們❤️早安</textarea><br>
@@ -251,7 +215,6 @@
                     <div id="start-hint" style="margin-top:20px; opacity:0; font-size:10px; animation: blink 1s infinite;">● PRESS START ●</div>
                 </div>
                 <div id="marquee-bar"><span id="marquee-text"></span></div>
-                <div id="action-toast"></div>
                 <canvas id="screen" width="480" height="320"></canvas>
             </div>
         </div>
