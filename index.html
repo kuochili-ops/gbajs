@@ -20,18 +20,29 @@
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
         body { background: var(--gb-body); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 調整遊戲區域高度 */
-        #game-area { width: 100vw; height: 42vh; display: flex; justify-content: center; align-items: center; padding-top: 10px; }
+        /* 核心調整：確保遊戲區域不超過螢幕高度的 40% */
+        #game-area { 
+            width: 100vw; 
+            height: 40vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px 0;
+        }
 
         .screen-frame {
             position: relative;
             background: #333;
-            /* 縮小寬度至 85%，確保高度不會溢出 */
-            width: 85vw; max-width: 380px; 
-            border-radius: 12px 12px 50px 12px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.8);
-            padding: 8px;
-            display: flex; justify-content: center; align-items: center;
+            /* 縮小畫框寬度至 80%，給垂直空間更多餘裕 */
+            width: 80vw; 
+            max-width: 360px; 
+            border-radius: 12px 12px 45px 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+            padding: 10px;
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;
         }
 
         #screen-inner {
@@ -40,11 +51,11 @@
             background: #000;
             border: 3px solid #111;
             border-radius: 4px;
-            overflow: visible; 
-            display: flex; flex-direction: column;
+            /* 確保絕對不裁切 */
+            overflow: visible !important; 
         }
 
-        /* 畫布：依據外框寬度縮放，保持 GBA 的 3:2 比例 */
+        /* 畫布：100% 寬度適應父容器，高度自動，確保 3:2 完整顯現 */
         canvas { 
             display: none; 
             width: 100% !important; 
@@ -61,22 +72,28 @@
             background: var(--screen-green);
         }
 
-        /* 跑馬燈：字體加大至 16px */
+        /* 跑馬燈：大字體 (18px) + 深色半透明底，確保在任何畫面都清晰 */
         #marquee-bar {
-            position: absolute; top: 0; left: 0; width: 100%;
-            background: rgba(0, 0, 0, 0.4); 
+            position: absolute; 
+            top: -25px; /* 移到螢幕內框上方一點，避免遮擋遊戲內容 */
+            left: 0; 
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6); 
             color: #fff; 
-            text-shadow: 2px 2px 3px #000;
-            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; 
-            font-size: 16px; 
+            font-family: "PingFang TC", sans-serif; 
+            font-size: 18px; 
             font-weight: bold;
-            padding: 5px 0; white-space: nowrap; overflow: hidden;
-            display: none; z-index: 110;
+            padding: 4px 0; 
+            white-space: nowrap; 
+            overflow: hidden;
+            display: none; 
+            z-index: 110;
+            border-radius: 4px;
         }
         #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 10s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 控制器區域 */
+        /* 控制器：維持穩定尺寸 */
         .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 15px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
@@ -86,7 +103,6 @@
         #btn-d { bottom: 0; left: 42px; width: 36px; height: 46px; border-radius: 0 0 4px 4px; }
         #btn-l { left: 0; top: 42px; width: 46px; height: 36px; border-radius: 4px 0 0 4px; }
         #btn-r { right: 0; top: 42px; width: 46px; height: 36px; border-radius: 0 4px 4px 0; }
-        #btn-center { top: 42px; left: 42px; width: 36px; height: 36px; background: transparent; z-index: 5; }
 
         .action-btns { position: relative; width: 140px; height: 110px; }
         .round-k { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.7); box-shadow: 0 5px 0 #500; }
@@ -199,7 +215,6 @@
             <div class="d-pad">
                 <div class="k" id="btn-u"></div><div class="k" id="btn-d"></div>
                 <div class="k" id="btn-l"></div><div class="k" id="btn-r"></div>
-                <div id="btn-center"></div>
             </div>
             <div class="action-btns">
                 <div class="round-k" id="btn-b">B</div>
