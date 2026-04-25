@@ -20,83 +20,59 @@
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
         body { background: var(--gb-body); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        #game-area { 
-            width: 100vw; 
-            height: 40vh; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            padding: 10px 0;
-        }
+        #game-area { width: 100vw; height: 40vh; display: flex; justify-content: center; align-items: center; }
 
+        /* 外框：定義一個固定的視覺邊界 */
         .screen-frame {
             position: relative;
             background: #333;
-            width: 85vw; 
-            max-width: 400px; 
+            width: 88vw; max-width: 420px; 
+            aspect-ratio: 1.4 / 1; /* 略寬於畫布以容納邊框 */
             border-radius: 12px 12px 50px 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            padding: 12px;
-            /* 關鍵：強制內部所有內容置中 */
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
         }
 
+        /* 核心調整：內層容器，確保內容絕對置中 */
         #screen-inner {
             position: relative;
-            width: 100%;
-            /* 保持 GBA 標準比例，以此撐開父容器 */
-            aspect-ratio: 3 / 2;
+            width: 92%; height: 85%;
             background: #000;
-            border: 4px solid #111;
-            border-radius: 4px;
-            overflow: hidden; 
-            /* 內部也要置中 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            border: 3px solid #111;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; /* 確保內容不溢出黑色區域 */
         }
 
-        /* 畫布：捨棄 absolute，改用標準流並填滿容器 */
+        /* 畫布：使用 transform scale 確保不管原始解析度是多少，都縮放至容器寬度 */
         canvas { 
             display: none; 
-            width: 100% !important; 
-            height: 100% !important; 
-            object-fit: contain;
+            width: 240px; height: 160px; /* 固定原始比例 */
+            transform: scale(1.35); /* 手機上適度放大以填滿黑色內框 */
             image-rendering: pixelated; 
             z-index: 5;
         }
 
         #intro-layer {
-            position: absolute; /* 初始畫面蓋在最上層 */
-            inset: 0;
+            position: absolute; inset: 0;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: #0f380f; font-family: monospace; font-weight: bold;
             padding: 15px; text-align: center; z-index: 100;
             background: var(--screen-green);
         }
 
-        /* 跑馬燈：修正為鎖定在 screen-inner 的頂部，且寬度對齊 */
+        /* 跑馬燈：字體加大且背景更深，確保置頂 */
         #marquee-bar {
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%;
-            background: rgba(0, 0, 0, 0.7); 
-            color: #fff; 
-            font-family: "PingFang TC", sans-serif; 
-            font-size: 16px; 
-            font-weight: bold;
-            padding: 4px 0; 
-            white-space: nowrap; 
-            overflow: hidden;
-            display: none; 
-            z-index: 110;
+            position: absolute; top: 0; left: 0; width: 100%;
+            background: rgba(0, 0, 0, 0.8); 
+            color: #fff; font-size: 16px; font-weight: bold;
+            padding: 5px 0; white-space: nowrap; overflow: hidden;
+            display: none; z-index: 110;
         }
-        #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 10s linear infinite; }
+        #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 12s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
+        /* 控制器區域 */
         .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
@@ -163,6 +139,11 @@
                         document.getElementById('intro-layer').style.display = 'none';
                         document.getElementById('screen').style.display = 'block';
                         document.getElementById('marquee-bar').style.display = 'block';
+                        
+                        // 強制修正畫布尺寸，避免模擬器溢出
+                        const canvas = document.getElementById('screen');
+                        canvas.style.width = "100%";
+                        canvas.style.height = "100%";
                     }
                 });
             } catch (e) { alert("ROM Load Failed"); }
