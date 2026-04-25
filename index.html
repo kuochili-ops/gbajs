@@ -18,13 +18,13 @@
     <style>
         :root { --p: #6b509c; --gb-body: #1a1a1a; --gb-grey: #2d2d2d; --gb-red: #a31a48; --screen-green: #9bbc0f; }
         
-        /* 核心防護：封鎖所有選取、放大鏡與長按觸發事件 */
         * { 
             -webkit-tap-highlight-color: transparent; 
-            -webkit-touch-callout: none; /* 禁用系統長按選單 */
-            -webkit-user-select: none;   /* 禁用文字選取 */
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none;   
             user-select: none; 
-            touch-action: none;          /* 禁用瀏覽器預設手勢 (縮放/滾動) */
+            /* 關鍵：禁用所有瀏覽器預設手勢（縮放、捲動） */
+            touch-action: none;          
             outline: none; 
             box-sizing: border-box; 
         }
@@ -39,7 +39,8 @@
             align-items: center; 
             height: 100vh; 
             overflow: hidden; 
-            position: fixed; /* 防止橡皮筋回彈效果 */
+            /* 防止 iOS 橡皮筋回彈效果導致畫面位移 */
+            position: fixed; 
             width: 100%;
         }
         
@@ -68,6 +69,7 @@
             display: none; 
             position: absolute;
             top: 50%; left: 50%;
+            /* 保持 GBA 原始比例縮放 */
             transform: translate(-50%, -50%) scale(0.65); 
             transform-origin: center;
             image-rendering: pixelated; 
@@ -93,7 +95,6 @@
         #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 12s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 控制器區域 */
         .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; }
         .d-pad { position: relative; width: 120px; height: 120px; }
@@ -119,7 +120,21 @@
         var charIndex = 0;
         const K = { UP:38, DOWN:40, LEFT:37, RIGHT:39, A:90, B:88, START:13, SELECT:16 };
 
-        // 全域攔截右鍵與長按選單
+        // --- 防縮放 JavaScript 補丁 ---
+        // 1. 攔截雙指縮放
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) e.preventDefault();
+        }, { passive: false });
+
+        // 2. 攔截快速連點（某些瀏覽器會縮放）
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) e.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+
+        // 3. 全域攔截右鍵與長按選單
         window.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); return false; };
 
         try { 
@@ -157,11 +172,8 @@
 
         async function runGame() {
             if (charIndex < customMsg.length) return;
-            
             if (gba.audio && gba.audio.context) {
-                if (gba.audio.context.state === 'suspended') {
-                    gba.audio.context.resume();
-                }
+                if (gba.audio.context.state === 'suspended') gba.audio.context.resume();
             }
 
             try {
@@ -187,7 +199,10 @@
                 if(id === 'btn-st') runGame();
                 triggerKey(keyCode, 'keydown'); 
             }, {passive: false});
-            el.addEventListener('touchend', (e) => { e.preventDefault(); triggerKey(keyCode, 'keyup'); }, {passive: false});
+            el.addEventListener('touchend', (e) => { 
+                e.preventDefault(); 
+                triggerKey(keyCode, 'keyup'); 
+            }, {passive: false});
         }
 
         const init = setInterval(() => {
