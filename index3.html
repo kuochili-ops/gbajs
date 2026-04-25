@@ -16,44 +16,74 @@
     <script src="resources/xhr.js"></script>
 
     <style>
-        :root { --p: #6b509c; --gb-black: #111; --gb-grey: #2d2d2d; --gb-red: #a31a48; --body-bg: #1a1a1a; --screen-green: #9bbc0f; }
-        * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
-        body { background: var(--body-bg); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        :root { --p: #6b509c; --gb-body: #1a1a1a; --gb-grey: #2d2d2d; --gb-red: #a31a48; --screen-green: #9bbc0f; }
         
-        #game-area { width: 100vw; height: 46vh; display: flex; justify-content: center; align-items: center; padding: 15px; margin-top: env(safe-area-inset-top, 10px); }
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none;   
+            user-select: none; 
+            touch-action: none;          
+            outline: none; 
+            box-sizing: border-box; 
+        }
+
+        body { 
+            background: var(--gb-body); 
+            color: #fff; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+            position: fixed;
+            width: 100%;
+        }
+        
+        #game-area { width: 100vw; height: 42vh; display: flex; justify-content: center; align-items: center; padding-top: 10px; }
 
         .screen-frame {
             position: relative;
             background: #333;
-            width: 92vw; max-width: 420px;
-            aspect-ratio: 240 / 185;
-            border-radius: 12px 12px 55px 12px;
-            box-shadow: 0 10px 35px rgba(0,0,0,0.8);
-            display: flex; justify-content: center; align-items: center; /* 核心置中 */
-            overflow: hidden;
+            width: 88vw; max-width: 400px;
+            aspect-ratio: 3 / 2.2;
+            border-radius: 12px 12px 50px 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+            display: flex; justify-content: center; align-items: center;
         }
 
         #screen-inner {
             position: relative;
-            width: 90%;
-            aspect-ratio: 3 / 2;
-            background: var(--screen-green);
-            border: 4px solid #111;
+            width: 90%; height: 85%;
+            background: #000;
+            border: 4px solid #181818;
             overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
         }
 
-        /* 遊戲畫布：絕對置中 */
-        canvas { 
+        canvas#screen { 
             display: none; 
             position: absolute;
             top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100% !important; height: auto !important; 
+            transform: translate(-50%, -50%) scale(0.65); 
+            transform-origin: center;
             image-rendering: pixelated; 
             z-index: 5;
         }
 
-        /* 訊息層：確保在最上層 */
+        /* 互動訊息標籤 (Toast) */
+        #action-toast {
+            position: absolute; bottom: 20%; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(107, 80, 156, 0.8);
+            color: white; padding: 5px 15px; border-radius: 20px;
+            font-size: 12px; font-weight: bold;
+            opacity: 0; transition: opacity 0.2s;
+            z-index: 120; pointer-events: none;
+            white-space: nowrap;
+        }
+
         #intro-layer {
             position: absolute; inset: 0;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -62,64 +92,60 @@
             background: var(--screen-green);
         }
 
-        /* 跑馬燈：修正顯示邏輯 */
         #marquee-bar {
             position: absolute; top: 0; left: 0; width: 100%;
-            background: rgba(15, 56, 15, 0.9);
-            color: var(--screen-green);
-            font-family: monospace; font-size: 11px;
-            padding: 4px 0; white-space: nowrap; overflow: hidden;
-            display: none; z-index: 110; /* 高於 Canvas */
+            background: rgba(0, 0, 0, 0.4); 
+            color: #fff; font-size: 14px; font-weight: bold;
+            padding: 5px 0; white-space: nowrap; overflow: hidden;
+            display: none; z-index: 110;
+            backdrop-filter: blur(2px);
         }
-        #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 10s linear infinite; }
+        #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 12s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 十字鍵區域優化 */
-        .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 35px; padding-bottom: env(safe-area-inset-bottom, 25px); }
-        .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .main-row { display: flex; justify-content: space-between; align-items: center; }
         
         .d-pad { position: relative; width: 120px; height: 120px; }
-        /* 向上鍵左側與周邊區塊改為機體黑色 */
-        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; z-index: 10; }
-        #btn-u { top: 0; left: 42px; width: 36px; height: 45px; border-radius: 4px 4px 0 0; }
-        #btn-d { bottom: 0; left: 42px; width: 36px; height: 45px; border-radius: 0 0 4px 4px; }
-        #btn-l { left: 0; top: 42px; width: 45px; height: 36px; border-radius: 4px 0 0 4px; }
-        #btn-r { right: 0; top: 42px; width: 45px; height: 36px; border-radius: 0 4px 4px 0; }
-        /* 修改此處：中心基座改為純黑色以消除紅圈色塊 */
-        #btn-center { top: 42px; left: 42px; width: 36px; height: 36px; background: #111; border: none; box-shadow: none; z-index: 5; }
+        .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; z-index: 10; transition: transform 0.1s; }
+        .d-pad .k:active { transform: scale(0.95); }
+        
+        #btn-u { top: 0; left: 42px; width: 36px; height: 46px; border-radius: 4px 4px 0 0; }
+        #btn-d { bottom: 0; left: 42px; width: 36px; height: 46px; border-radius: 0 0 4px 4px; }
+        #btn-l { left: 0; top: 42px; width: 46px; height: 36px; border-radius: 4px 0 0 4px; }
+        #btn-r { right: 0; top: 42px; width: 46px; height: 36px; border-radius: 0 4px 4px 0; }
 
         .action-btns { position: relative; width: 140px; height: 110px; }
-        .round-k { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.6); box-shadow: 0 6px 0 #500; }
+        .round-k { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.7); box-shadow: 0 5px 0 #500; transition: transform 0.1s; }
+        .round-k:active { transform: translateY(3px); box-shadow: 0 2px 0 #500; }
         #btn-b { left: 0; bottom: 0; }
         #btn-a { right: 0; top: 0; }
 
         .sys-row { display: flex; justify-content: center; gap: 40px; }
-        .oval-k { width: 55px; height: 18px; background: #444; border-radius: 10px; transform: rotate(-25deg); box-shadow: 0 3px 0 #111; }
+        .oval-k { width: 54px; height: 18px; background: #444; border-radius: 10px; transform: rotate(-25deg); box-shadow: 0 3px 0 #111; }
         .sys-label { font-size: 10px; color: #444; font-weight: bold; transform: rotate(-25deg); margin-top: 5px; }
 
-        .k:active, .round-k:active, .oval-k:active { transform: translateY(2px) !important; box-shadow: none !important; filter: brightness(1.2); }
-
         #setup-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     </style>
 
     <script>
         var gba;
         var customMsg = "";
         var charIndex = 0;
+        var toastTimer;
         const K = { UP:38, DOWN:40, LEFT:37, RIGHT:39, A:90, B:88, START:13, SELECT:16 };
 
-        try { gba = new GameBoyAdvance(); } catch (e) { console.error(e); }
+        window.oncontextmenu = function(e) { e.preventDefault(); return false; };
+
+        try { gba = new GameBoyAdvance(); gba.keypad.eatInput = true; } catch (e) { console.error(e); }
 
         window.onload = function() {
             const params = new URLSearchParams(window.location.search);
             const msgParam = params.get('msg');
-            if (msgParam) {
-                document.getElementById('setup-ui').style.display = 'none';
-                customMsg = decodeURIComponent(msgParam);
-                document.getElementById('marquee-text').innerText = " ★ " + customMsg + " ★ ";
-                type();
-            }
+            customMsg = msgParam ? decodeURIComponent(msgParam) : "親友們❤️早安";
+            document.getElementById('msgInput').value = customMsg;
+            document.getElementById('marquee-text').innerText = " ★ " + customMsg + " ★ ";
+            type();
             if (gba) {
                 gba.setCanvas(document.getElementById('screen'));
                 loadRom('resources/bios.bin', (bios) => bios && gba.setBios(bios));
@@ -132,14 +158,12 @@
                 container.innerHTML += customMsg.charAt(charIndex);
                 charIndex++;
                 setTimeout(type, 100);
-            } else {
-                document.getElementById('start-hint').style.opacity = 1;
-            }
+            } else { document.getElementById('start-hint').style.opacity = 1; }
         }
 
         async function runGame() {
             if (charIndex < customMsg.length) return;
-            if (gba.audio && gba.audio.context) gba.audio.context.resume();
+            if (gba.audio && gba.audio.context && gba.audio.context.state === 'suspended') gba.audio.context.resume();
             try {
                 const res = await fetch("game.gba");
                 const blob = await res.blob();
@@ -151,29 +175,47 @@
                         document.getElementById('marquee-bar').style.display = 'block';
                     }
                 });
-            } catch (e) { alert("Load Failed"); }
+            } catch (e) { alert("ROM Load Failed"); }
         }
 
-        function triggerKey(code, type) {
-            const event = new KeyboardEvent(type, { keyCode: code, which: code, bubbles: true });
-            window.dispatchEvent(event);
+        // 顯示按鍵動作訊息
+        function showActionMsg(dir) {
+            const toast = document.getElementById('action-toast');
+            const messages = {
+                'UP': '向上探索中 ➚',
+                'DOWN': '向下移動中 ➘',
+                'LEFT': '往左走走 ⇠',
+                'RIGHT': '向右前進 ⇢',
+                'A': '確認 / 跳躍 ⚡',
+                'B': '取消 / 加速 💨'
+            };
+            toast.innerText = messages[dir] || dir;
+            toast.style.opacity = 1;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toast.style.opacity = 0; }, 800);
         }
 
-        function setupBtn(id, keyCode) {
+        function triggerKey(code, type, dirName) {
+            window.dispatchEvent(new KeyboardEvent(type, { keyCode: code }));
+            if (type === 'keydown' && dirName) showActionMsg(dirName);
+        }
+
+        function setupBtn(id, keyCode, dirName) {
             const el = document.getElementById(id);
             el.addEventListener('touchstart', (e) => { 
                 e.preventDefault(); 
                 if(id === 'btn-st') runGame();
-                triggerKey(keyCode, 'keydown'); 
+                triggerKey(keyCode, 'keydown', dirName); 
             }, {passive: false});
             el.addEventListener('touchend', (e) => { e.preventDefault(); triggerKey(keyCode, 'keyup'); }, {passive: false});
         }
 
         const init = setInterval(() => {
             if (gba) {
-                const buttons = ['btn-u','btn-d','btn-l','btn-r','btn-a','btn-b','btn-st','btn-se'];
+                const names = ['UP','DOWN','LEFT','RIGHT','A','B','START','SELECT'];
+                const ids = ['btn-u','btn-d','btn-l','btn-r','btn-a','btn-b','btn-st','btn-se'];
                 const keys = [K.UP, K.DOWN, K.LEFT, K.RIGHT, K.A, K.B, K.START, K.SELECT];
-                buttons.forEach((id, idx) => setupBtn(id, keys[idx]));
+                ids.forEach((id, idx) => setupBtn(id, keys[idx], names[idx]));
                 clearInterval(init);
             }
         }, 300);
@@ -182,7 +224,7 @@
 <body>
 
     <div id="setup-ui">
-        <textarea id="msgInput">親愛的Serena❤️早安</textarea><br>
+        <textarea id="msgInput">親友們❤️早安</textarea><br>
         <button onclick="const url = window.location.origin + window.location.pathname + '?msg=' + encodeURIComponent(document.getElementById('msgInput').value); navigator.clipboard.writeText(url).then(() => alert('連結已複製'));" style="background:var(--p); color:#fff; border:none; padding:12px 25px; border-radius:25px; font-weight:bold;">生成連結</button>
     </div>
 
@@ -194,7 +236,8 @@
                     <div id="start-hint" style="margin-top:20px; opacity:0; font-size:10px; animation: blink 1s infinite;">● PRESS START ●</div>
                 </div>
                 <div id="marquee-bar"><span id="marquee-text"></span></div>
-                <canvas id="screen" width="240" height="160"></canvas>
+                <div id="action-toast"></div>
+                <canvas id="screen" width="480" height="320"></canvas>
             </div>
         </div>
     </div>
@@ -204,7 +247,6 @@
             <div class="d-pad">
                 <div class="k" id="btn-u"></div><div class="k" id="btn-d"></div>
                 <div class="k" id="btn-l"></div><div class="k" id="btn-r"></div>
-                <div id="btn-center"></div>
             </div>
             <div class="action-btns">
                 <div class="round-k" id="btn-b">B</div>
@@ -215,7 +257,7 @@
             <div class="sys-group"><div class="oval-k" id="btn-se"></div><div class="sys-label">SELECT</div></div>
             <div class="sys-group"><div class="oval-k" id="btn-st"></div><div class="sys-label">START</div></div>
         </div>
-        <div style="text-align:center; color:#333; font-size:10px; font-weight:bold; letter-spacing:4px;">Nintendo GAME BOY</div>
+        <div style="text-align:center; color:#333; font-size:10px; font-weight:bold; letter-spacing:4px; margin-top:10px;">Nintendo GAME BOY</div>
     </div>
 
 </body>
