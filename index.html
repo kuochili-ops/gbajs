@@ -20,79 +20,82 @@
         * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; outline: none; box-sizing: border-box; }
         body { background: var(--gb-body); color: #fff; font-family: -apple-system, sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        /* 1. 頂部顯示區：改為完全透明且不限制高度 */
-        #game-area { width: 100vw; height: 45vh; display: flex; justify-content: center; align-items: center; position: relative; overflow: visible; }
+        /* 調整遊戲區域高度 */
+        #game-area { width: 100vw; height: 42vh; display: flex; justify-content: center; align-items: center; padding-top: 10px; }
 
-        /* 2. 徹底移除外框的比例與背景，確保不干擾畫布渲染 */
         .screen-frame {
             position: relative;
-            width: 100vw;
+            background: #333;
+            /* 縮小寬度至 85%，確保高度不會溢出 */
+            width: 85vw; max-width: 380px; 
+            border-radius: 12px 12px 50px 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.8);
+            padding: 8px;
             display: flex; justify-content: center; align-items: center;
-            overflow: visible !important;
         }
 
         #screen-inner {
             position: relative;
             width: 100%;
-            display: flex; flex-direction: column; align-items: center;
             background: #000;
-            overflow: visible !important; 
+            border: 3px solid #111;
+            border-radius: 4px;
+            overflow: visible; 
+            display: flex; flex-direction: column;
         }
 
-        /* 3. 畫布：使用 width: 100% 確保寬度填滿，高度由瀏覽器依比例自動拉伸，絕不裁切 */
+        /* 畫布：依據外框寬度縮放，保持 GBA 的 3:2 比例 */
         canvas { 
             display: none; 
             width: 100% !important; 
             height: auto !important; 
-            max-width: 480px; /* 避免在平板上過大 */
             image-rendering: pixelated; 
             z-index: 5;
-            border: 2px solid #333; /* 僅保留薄邊框 */
         }
 
         #intro-layer {
-            width: 100%; aspect-ratio: 3/2; max-width: 480px;
+            width: 100%; aspect-ratio: 3/2;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: #0f380f; font-family: monospace; font-weight: bold;
             padding: 15px; text-align: center; z-index: 100;
             background: var(--screen-green);
         }
 
-        /* 4. 跑馬燈：字體顯著放大 (14px)，並改用更清晰的背景 */
+        /* 跑馬燈：字體加大至 16px */
         #marquee-bar {
             position: absolute; top: 0; left: 0; width: 100%;
             background: rgba(0, 0, 0, 0.4); 
             color: #fff; 
-            text-shadow: 2px 2px 4px #000;
-            font-family: "PingFang TC", "Microsoft JhengHei", monospace; 
-            font-size: 14px; /* 字體放大 */
+            text-shadow: 2px 2px 3px #000;
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; 
+            font-size: 16px; 
             font-weight: bold;
-            padding: 6px 0; white-space: nowrap; overflow: hidden;
+            padding: 5px 0; white-space: nowrap; overflow: hidden;
             display: none; z-index: 110;
         }
         #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 10s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 控制器區域：維持原狀但稍微往下移，騰出空間給畫面 */
-        .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); background: #1a1a1a; z-index: 20; }
+        /* 控制器區域 */
+        .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 15px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         
-        .d-pad { position: relative; width: 125px; height: 125px; }
+        .d-pad { position: relative; width: 120px; height: 120px; }
         .d-pad .k { position: absolute; background: var(--gb-grey); box-shadow: 0 4px 0 #000; border: 1px solid #111; z-index: 10; }
-        #btn-u { top: 0; left: 44px; width: 38px; height: 48px; border-radius: 4px 4px 0 0; }
-        #btn-d { bottom: 0; left: 44px; width: 38px; height: 48px; border-radius: 0 0 4px 4px; }
-        #btn-l { left: 0; top: 44px; width: 48px; height: 38px; border-radius: 4px 0 0 4px; }
-        #btn-r { right: 0; top: 44px; width: 48px; height: 38px; border-radius: 0 4px 4px 0; }
-        #btn-center { top: 44px; left: 44px; width: 38px; height: 38px; background: transparent; z-index: 5; }
+        #btn-u { top: 0; left: 42px; width: 36px; height: 46px; border-radius: 4px 4px 0 0; }
+        #btn-d { bottom: 0; left: 42px; width: 36px; height: 46px; border-radius: 0 0 4px 4px; }
+        #btn-l { left: 0; top: 42px; width: 46px; height: 36px; border-radius: 4px 0 0 4px; }
+        #btn-r { right: 0; top: 42px; width: 46px; height: 36px; border-radius: 0 4px 4px 0; }
+        #btn-center { top: 42px; left: 42px; width: 36px; height: 36px; background: transparent; z-index: 5; }
 
-        .action-btns { position: relative; width: 150px; height: 120px; }
-        .round-k { position: absolute; width: 64px; height: 64px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; color: rgba(255,255,255,0.7); box-shadow: 0 6px 0 #500; }
+        .action-btns { position: relative; width: 140px; height: 110px; }
+        .round-k { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: var(--gb-red); border: 2px solid #500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 22px; color: rgba(255,255,255,0.7); box-shadow: 0 5px 0 #500; }
         #btn-b { left: 0; bottom: 0; }
         #btn-a { right: 0; top: 0; }
 
-        .sys-row { display: flex; justify-content: center; gap: 45px; }
-        .oval-k { width: 58px; height: 20px; background: #444; border-radius: 12px; transform: rotate(-25deg); box-shadow: 0 3px 0 #111; }
-        .sys-label { font-size: 11px; color: #444; font-weight: bold; transform: rotate(-25deg); margin-top: 6px; }
+        .sys-row { display: flex; justify-content: center; gap: 40px; }
+        .oval-k { width: 54px; height: 18px; background: #444; border-radius: 10px; transform: rotate(-25deg); box-shadow: 0 3px 0 #111; }
+        .sys-label { font-size: 10px; color: #444; font-weight: bold; transform: rotate(-25deg); margin-top: 5px; }
 
         #setup-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     </style>
