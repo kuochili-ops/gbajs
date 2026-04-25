@@ -41,7 +41,6 @@
             display: flex; justify-content: center; align-items: center;
         }
 
-        /* 畫布：採用 transform 置中並縮放 */
         canvas#screen { 
             display: none; 
             position: absolute;
@@ -60,19 +59,17 @@
             background: var(--screen-green);
         }
 
-        /* 跑馬燈：提高透明度 (rgba 最後一個參數調低) */
         #marquee-bar {
             position: absolute; top: 0; left: 0; width: 100%;
-            background: rgba(0, 0, 0, 0.4); /* 透明度調高，讓背景若隱若現 */
+            background: rgba(0, 0, 0, 0.4); 
             color: #fff; font-size: 14px; font-weight: bold;
             padding: 5px 0; white-space: nowrap; overflow: hidden;
             display: none; z-index: 110;
-            backdrop-filter: blur(2px); /* 增加一點毛玻璃效果，提升質感 */
+            backdrop-filter: blur(2px);
         }
         #marquee-text { display: inline-block; padding-left: 100%; animation: marquee 12s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-        /* 控制器樣式 */
         .gb-controls { flex: 1; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 30px; padding-bottom: env(safe-area-inset-bottom, 20px); }
         .main-row { display: flex; justify-content: space-between; align-items: center; }
         .d-pad { position: relative; width: 120px; height: 120px; }
@@ -98,7 +95,10 @@
         var charIndex = 0;
         const K = { UP:38, DOWN:40, LEFT:37, RIGHT:39, A:90, B:88, START:13, SELECT:16 };
 
-        try { gba = new GameBoyAdvance(); gba.keypad.eatInput = true; } catch (e) { console.error(e); }
+        try { 
+            gba = new GameBoyAdvance(); 
+            gba.keypad.eatInput = true; 
+        } catch (e) { console.error(e); }
 
         window.onload = function() {
             const params = new URLSearchParams(window.location.search);
@@ -106,9 +106,14 @@
             if (msgParam) {
                 document.getElementById('setup-ui').style.display = 'none';
                 customMsg = decodeURIComponent(msgParam);
-                document.getElementById('marquee-text').innerText = " ★ " + customMsg + " ★ ";
-                type();
+            } else {
+                // 預設語更新
+                customMsg = "親友們❤️早安";
+                document.getElementById('msgInput').value = customMsg;
             }
+            document.getElementById('marquee-text').innerText = " ★ " + customMsg + " ★ ";
+            type();
+
             if (gba) {
                 gba.setCanvas(document.getElementById('screen'));
                 loadRom('resources/bios.bin', (bios) => bios && gba.setBios(bios));
@@ -126,7 +131,14 @@
 
         async function runGame() {
             if (charIndex < customMsg.length) return;
-            if (gba.audio && gba.audio.context) gba.audio.context.resume();
+            
+            // 核心音效修復：在觸摸事件中明確解鎖 AudioContext
+            if (gba.audio && gba.audio.context) {
+                if (gba.audio.context.state === 'suspended') {
+                    gba.audio.context.resume();
+                }
+            }
+
             try {
                 const res = await fetch("game.gba");
                 const blob = await res.blob();
@@ -147,6 +159,7 @@
             const el = document.getElementById(id);
             el.addEventListener('touchstart', (e) => { 
                 e.preventDefault(); 
+                // 只要按下 START 就嘗試觸發音訊解鎖
                 if(id === 'btn-st') runGame();
                 triggerKey(keyCode, 'keydown'); 
             }, {passive: false});
